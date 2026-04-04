@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
   Calendar, 
@@ -53,6 +53,23 @@ const AppContent = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [showReminderForm, setShowReminderForm] = useState(false);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('darkMode') === 'true' || 
+             window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('darkMode', darkMode.toString());
+  }, [darkMode]);
 
   if (loading) {
     return (
@@ -79,7 +96,7 @@ const AppContent = () => {
             onClick={loginWithGoogle}
             className="w-full py-4 bg-brand-600 text-white rounded-2xl font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-200 flex items-center justify-center gap-3"
           >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" alt="Google" className="w-6 h-6 bg-white rounded-full p-1" />
+            <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/24px.svg" alt="Google" className="w-6 h-6" referrerPolicy="no-referrer" />
             Sign in with Google
           </button>
         </motion.div>
@@ -98,17 +115,28 @@ const AppContent = () => {
 
   const allReminders = [...(state.tasks || []), ...(state.exams || [])];
   
-  const upcomingReminders = allReminders
+  const filteredReminders = allReminders.filter(item => 
+    item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.course.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const upcomingReminders = filteredReminders
     .filter(t => !t.completed)
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
     .slice(0, 3);
 
   const todayClasses = (state.schedule || [])
     .filter(s => s.day === new Date().getDay())
+    .filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.room.toLowerCase().includes(searchQuery.toLowerCase()))
     .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
+  const filteredSchedule = (state.schedule || []).filter(s => 
+    s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    s.room.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex w-full min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 transition-colors duration-300">
       {/* Notifications Overlay */}
       <div className="fixed top-20 right-4 z-50 space-y-2 pointer-events-none">
         <AnimatePresence>
@@ -151,11 +179,11 @@ const AppContent = () => {
       )}
 
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-200 hidden lg:flex flex-col sticky top-0 h-screen">
+      <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 hidden lg:flex flex-col sticky top-0 h-screen transition-colors">
         <div className="p-6">
           <div className="flex items-center gap-2 text-brand-600 mb-8">
             <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white font-bold">C</div>
-            <h1 className="text-xl font-display font-bold text-slate-900">CampusFlow</h1>
+            <h1 className="text-xl font-display font-bold text-slate-900 dark:text-white">CampusFlow</h1>
           </div>
 
           <nav className="space-y-1">
@@ -166,8 +194,8 @@ const AppContent = () => {
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all",
                   activeTab === item.id 
-                    ? "bg-brand-50 text-brand-600" 
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                    ? "bg-brand-50 dark:bg-brand-900/20 text-brand-600" 
+                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
                 <item.icon size={20} />
@@ -177,19 +205,19 @@ const AppContent = () => {
           </nav>
         </div>
 
-        <div className="mt-auto p-6 border-t border-slate-100">
+        <div className="mt-auto p-6 border-t border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-3 mb-6 px-2">
-            <div className="w-10 h-10 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold overflow-hidden">
-              {user.photoURL ? <img src={user.photoURL} alt="User" /> : user.displayName?.charAt(0) || 'U'}
+            <div className="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-900/40 text-brand-600 flex items-center justify-center font-bold overflow-hidden">
+              {user.photoURL ? <img src={user.photoURL} alt="User" referrerPolicy="no-referrer" /> : user.displayName?.charAt(0) || 'U'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-slate-900 truncate">{user.displayName || 'Student'}</p>
-              <p className="text-xs text-slate-500 truncate">{user.email}</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user.displayName || 'Student'}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user.email}</p>
             </div>
           </div>
           <button 
             onClick={logout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition-all"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
           >
             <LogOut size={20} />
             Sign Out
@@ -200,19 +228,26 @@ const AppContent = () => {
       {/* Main Content */}
       <main className="flex-1 min-w-0">
         {/* Header */}
-        <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-10 px-4 lg:px-8 py-4">
+        <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 px-4 lg:px-8 py-4 transition-colors">
           <div className="flex items-center justify-between max-w-7xl mx-auto">
             <div className="lg:hidden flex items-center gap-2 text-brand-600">
               <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white font-bold">C</div>
             </div>
 
-            <div className="hidden md:flex items-center bg-slate-100 rounded-full px-4 py-2 w-96">
-              <Search size={18} className="text-slate-400" />
+            <div className="hidden md:flex items-center bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2 w-96 transition-colors">
+              <Search size={18} className="text-slate-400 dark:text-slate-500" />
               <input 
                 type="text" 
                 placeholder="Search courses, tasks, notes..." 
-                className="bg-transparent border-none focus:ring-0 text-sm ml-2 w-full"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-transparent border-none focus:ring-0 text-sm ml-2 w-full dark:text-white dark:placeholder-slate-500"
               />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                  <X size={14} />
+                </button>
+              )}
             </div>
 
             <div className="flex items-center gap-4">
@@ -220,24 +255,24 @@ const AppContent = () => {
                 onClick={() => setActiveTab('tasks')}
                 className={cn(
                   "p-2 rounded-full transition-all relative",
-                  activeTab === 'tasks' ? "bg-brand-50 text-brand-600" : "text-slate-400 hover:bg-slate-100"
+                  activeTab === 'tasks' ? "bg-brand-50 dark:bg-brand-900/20 text-brand-600" : "text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
                 )}
               >
                 <Bell size={20} />
                 {(state.notifications || []).length > 0 && (
-                  <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                  <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
                 )}
               </button>
-              <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
+              <div className="flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-slate-800">
                 <div className="text-right hidden sm:block">
-                  <p className="text-sm font-semibold text-slate-900">{user.displayName || 'Student'}</p>
-                  <p className="text-xs text-slate-500">Academic Profile</p>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">{user.displayName || 'Student'}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Academic Profile</p>
                 </div>
                 <button 
                   onClick={() => setActiveTab('settings')}
-                  className="w-10 h-10 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold overflow-hidden border-2 border-transparent hover:border-brand-500 transition-all"
+                  className="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-900/40 text-brand-600 flex items-center justify-center font-bold overflow-hidden border-2 border-transparent hover:border-brand-500 transition-all"
                 >
-                  {user.photoURL ? <img src={user.photoURL} alt="User" /> : user.displayName?.charAt(0) || 'U'}
+                  {user.photoURL ? <img src={user.photoURL} alt="User" referrerPolicy="no-referrer" /> : user.displayName?.charAt(0) || 'U'}
                 </button>
               </div>
             </div>
@@ -258,13 +293,13 @@ const AppContent = () => {
                 <div className="space-y-8">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                      <h2 className="text-3xl font-display font-bold text-slate-900">Welcome back, {user.displayName?.split(' ')[0] || 'Student'}!</h2>
-                      <p className="text-slate-500">Here's what's happening on campus today.</p>
+                      <h2 className="text-3xl font-display font-bold text-slate-900 dark:text-white">Welcome back, {user.displayName?.split(' ')[0] || 'Student'}!</h2>
+                      <p className="text-slate-500 dark:text-slate-400">Here's what's happening on campus today.</p>
                     </div>
                     <div className="flex gap-3">
                       <button 
                         onClick={() => setShowScheduleForm(true)}
-                        className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50 transition-all flex items-center gap-2"
+                        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center gap-2"
                       >
                         <Calendar size={18} />
                         Add Class
@@ -283,42 +318,42 @@ const AppContent = () => {
                     {/* Today's Classes */}
                     <div className="lg:col-span-2 space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <h3 className="text-lg font-semibold flex items-center gap-2 dark:text-white">
                           <Calendar size={20} className="text-brand-500" />
                           Today's Classes
                         </h3>
-                        <span className="text-xs font-medium text-slate-400">{format(new Date(), 'EEEE, MMMM d')}</span>
+                        <span className="text-xs font-medium text-slate-400 dark:text-slate-500">{format(new Date(), 'EEEE, MMMM d')}</span>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {todayClasses.length > 0 ? (
                           todayClasses.map(session => (
                             <div key={session.id} className="glass p-5 rounded-2xl card-hover border-l-4 relative group" style={{ borderLeftColor: session.color }}>
                               <div className="flex justify-between items-start mb-4">
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{session.startTime} - {session.endTime}</span>
+                                <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{session.startTime} - {session.endTime}</span>
                                 <div className="flex items-center gap-2">
-                                  <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-1 rounded-full font-bold uppercase">{session.room}</span>
+                                  <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] px-2 py-1 rounded-full font-bold uppercase">{session.room}</span>
                                   <button 
                                     onClick={() => deleteClass(session.id)}
-                                    className="p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="p-1 text-slate-300 dark:text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                                   >
                                     <Trash2 size={14} />
                                   </button>
                                 </div>
                               </div>
-                              <h4 className="text-lg font-bold text-slate-800 mb-1">{session.name}</h4>
-                              <p className="text-sm text-slate-500">Main Campus • Building B</p>
+                              <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-1">{session.name}</h4>
+                              <p className="text-sm text-slate-500 dark:text-slate-400">Main Campus • Building B</p>
                             </div>
                           ))
                         ) : (
-                          <div className="col-span-full p-8 glass rounded-2xl text-center text-slate-400 italic">
-                            No classes scheduled for today. Enjoy your break!
+                          <div className="col-span-full p-8 glass rounded-2xl text-center text-slate-400 dark:text-slate-500 italic">
+                            {searchQuery ? "No classes match your search." : "No classes scheduled for today. Enjoy your break!"}
                           </div>
                         )}
                       </div>
 
                       <div className="mt-8 space-y-4">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <h3 className="text-lg font-semibold flex items-center gap-2 dark:text-white">
                             <CheckSquare size={20} className="text-brand-500" />
                             Upcoming Deadlines
                           </h3>
@@ -344,7 +379,7 @@ const AppContent = () => {
 
                     {/* Sidebar Widgets */}
                     <div className="space-y-8">
-                      <div className="bg-brand-600 rounded-3xl p-6 text-white shadow-xl shadow-brand-100 relative overflow-hidden">
+                      <div className="bg-brand-600 rounded-3xl p-6 text-white shadow-xl shadow-brand-100 dark:shadow-none relative overflow-hidden">
                         <div className="relative z-10">
                           <h4 className="text-brand-100 text-xs font-bold uppercase tracking-widest mb-1">Current GPA</h4>
                           <p className="text-4xl font-bold mb-4">
@@ -361,14 +396,14 @@ const AppContent = () => {
 
                       {/* Quick AI Help - IMPROVED LAYOUT */}
                       <div className="glass rounded-3xl p-6 flex flex-col min-h-[220px]">
-                        <h4 className="font-semibold mb-4 flex items-center gap-2">
+                        <h4 className="font-semibold mb-4 flex items-center gap-2 dark:text-white">
                           <MessageSquare size={18} className="text-brand-500" />
                           Quick AI Help
                         </h4>
-                        <p className="text-sm text-slate-500 mb-6 flex-1">Stuck on a concept? Ask your study buddy for a quick explanation or assignment help.</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 flex-1">Stuck on a concept? Ask your study buddy for a quick explanation or assignment help.</p>
                         <button 
                           onClick={() => setActiveTab('ai')}
-                          className="w-full py-3 bg-slate-900 text-white hover:bg-slate-800 rounded-xl text-sm font-medium transition-all shadow-lg shadow-slate-200"
+                          className="w-full py-3 bg-slate-900 dark:bg-slate-800 text-white hover:bg-slate-800 dark:hover:bg-slate-700 rounded-xl text-sm font-medium transition-all shadow-lg shadow-slate-200 dark:shadow-none"
                         >
                           Start Chatting
                         </button>
@@ -382,8 +417,8 @@ const AppContent = () => {
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h2 className="text-3xl font-display font-bold text-slate-900">Weekly Schedule</h2>
-                      <p className="text-slate-500">Manage your classes and lecture halls.</p>
+                      <h2 className="text-3xl font-display font-bold text-slate-900 dark:text-white">Weekly Schedule</h2>
+                      <p className="text-slate-500 dark:text-slate-400">Manage your classes and lecture halls.</p>
                     </div>
                     <button 
                       onClick={() => setShowScheduleForm(true)}
@@ -393,7 +428,7 @@ const AppContent = () => {
                       Add Class
                     </button>
                   </div>
-                  <Timetable schedule={state.schedule} onDelete={deleteClass} />
+                  <Timetable schedule={filteredSchedule} onDelete={deleteClass} />
                 </div>
               )}
 
@@ -401,8 +436,8 @@ const AppContent = () => {
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h2 className="text-3xl font-display font-bold text-slate-900">Reminders & Deadlines</h2>
-                      <p className="text-slate-500">Keep track of your academic deadlines and exams.</p>
+                      <h2 className="text-3xl font-display font-bold text-slate-900 dark:text-white">Reminders & Deadlines</h2>
+                      <p className="text-slate-500 dark:text-slate-400">Keep track of your academic deadlines and exams.</p>
                     </div>
                     <button 
                       onClick={() => setShowReminderForm(true)}
@@ -415,16 +450,16 @@ const AppContent = () => {
 
                   {/* Notification History */}
                   {(state.notifications || []).length > 0 && (
-                    <div className="bg-brand-50 border border-brand-100 rounded-3xl p-6 mb-8">
-                      <h3 className="text-sm font-bold text-brand-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <div className="bg-brand-50 dark:bg-brand-900/20 border border-brand-100 dark:border-brand-900 rounded-3xl p-6 mb-8">
+                      <h3 className="text-sm font-bold text-brand-700 dark:text-brand-400 uppercase tracking-wider mb-4 flex items-center gap-2">
                         <Bell size={16} />
                         Recent Notifications
                       </h3>
                       <div className="space-y-2">
                         {state.notifications.map(notif => (
-                          <div key={notif.id} className="bg-white p-3 rounded-xl border border-brand-100 flex justify-between items-center">
-                            <p className="text-sm text-slate-700">{notif.message}</p>
-                            <button onClick={() => clearNotification(notif.id)} className="text-slate-300 hover:text-red-500">
+                          <div key={notif.id} className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-brand-100 dark:border-brand-900 flex justify-between items-center">
+                            <p className="text-sm text-slate-700 dark:text-slate-300">{notif.message}</p>
+                            <button onClick={() => clearNotification(notif.id)} className="text-slate-300 dark:text-slate-600 hover:text-red-500">
                               <X size={14} />
                             </button>
                           </div>
@@ -434,7 +469,7 @@ const AppContent = () => {
                   )}
 
                   <TaskList 
-                    tasks={allReminders} 
+                    tasks={filteredReminders} 
                     onToggle={(id) => {
                       const item = allReminders.find(r => r.id === id);
                       if (item?.type === 'task') toggleTask(id);
@@ -478,61 +513,70 @@ const AppContent = () => {
               {activeTab === 'settings' && (
                 <div className="space-y-8">
                   <div>
-                    <h2 className="text-3xl font-display font-bold text-slate-900">Settings</h2>
-                    <p className="text-slate-500">Manage your account and app preferences.</p>
+                    <h2 className="text-3xl font-display font-bold text-slate-900 dark:text-white">Settings</h2>
+                    <p className="text-slate-500 dark:text-slate-400">Manage your account and app preferences.</p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-6">
-                      <h3 className="text-xl font-bold text-slate-900">Profile Information</h3>
+                    <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">Profile Information</h3>
                       <div className="flex items-center gap-4">
-                        <div className="w-20 h-20 rounded-3xl bg-brand-100 text-brand-600 flex items-center justify-center font-bold text-2xl overflow-hidden">
-                          {user.photoURL ? <img src={user.photoURL} alt="User" /> : user.displayName?.charAt(0) || 'U'}
+                        <div className="w-20 h-20 rounded-3xl bg-brand-100 dark:bg-brand-900/40 text-brand-600 flex items-center justify-center font-bold text-2xl overflow-hidden">
+                          {user.photoURL ? <img src={user.photoURL} alt="User" referrerPolicy="no-referrer" /> : user.displayName?.charAt(0) || 'U'}
                         </div>
                         <div>
-                          <p className="text-lg font-bold text-slate-900">{user.displayName || 'Student'}</p>
-                          <p className="text-slate-500">{user.email}</p>
+                          <p className="text-lg font-bold text-slate-900 dark:text-white">{user.displayName || 'Student'}</p>
+                          <p className="text-slate-500 dark:text-slate-400">{user.email}</p>
                         </div>
                       </div>
-                      <div className="pt-4 border-t border-slate-50">
+                      <div className="pt-4 border-t border-slate-50 dark:border-slate-800">
                         <p className="text-xs font-bold text-slate-400 uppercase mb-2">Account Status</p>
-                        <span className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-xs font-bold">Verified Account</span>
+                        <span className="px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-full text-xs font-bold">Verified Account</span>
                       </div>
                     </div>
 
-                    <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-6">
-                      <h3 className="text-xl font-bold text-slate-900">App Preferences</h3>
+                    <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">App Preferences</h3>
                       <div className="space-y-4">
-                        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                        <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl">
                           <div>
-                            <p className="font-bold text-slate-900">Push Notifications</p>
-                            <p className="text-xs text-slate-500">Receive alerts for upcoming deadlines</p>
+                            <p className="font-bold text-slate-900 dark:text-white">Push Notifications</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Receive alerts for upcoming deadlines</p>
                           </div>
                           <div className="w-12 h-6 bg-brand-600 rounded-full relative cursor-pointer">
                             <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></div>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                        <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl">
                           <div>
-                            <p className="font-bold text-slate-900">Dark Mode</p>
-                            <p className="text-xs text-slate-500">Switch to dark theme (Coming Soon)</p>
+                            <p className="font-bold text-slate-900 dark:text-white">Dark Mode</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Switch between light and dark themes</p>
                           </div>
-                          <div className="w-12 h-6 bg-slate-200 rounded-full relative">
-                            <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full"></div>
-                          </div>
+                          <button 
+                            onClick={() => setDarkMode(!darkMode)}
+                            className={cn(
+                              "w-12 h-6 rounded-full relative transition-colors duration-300",
+                              darkMode ? "bg-brand-600" : "bg-slate-300"
+                            )}
+                          >
+                            <div className={cn(
+                              "absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300",
+                              darkMode ? "right-1" : "left-1"
+                            )}></div>
+                          </button>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-red-50 p-8 rounded-[2rem] border border-red-100 flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="bg-red-50 dark:bg-red-900/10 p-8 rounded-[2rem] border border-red-100 dark:border-red-900/20 flex flex-col md:flex-row items-center justify-between gap-6">
                     <div>
-                      <h3 className="text-xl font-bold text-red-900">Danger Zone</h3>
-                      <p className="text-red-600/70">Sign out of your account or manage data deletion.</p>
+                      <h3 className="text-xl font-bold text-red-900 dark:text-red-400">Danger Zone</h3>
+                      <p className="text-red-600/70 dark:text-red-400/60">Sign out of your account or manage data deletion.</p>
                     </div>
                     <button 
                       onClick={logout}
-                      className="px-8 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-200 flex items-center gap-2"
+                      className="px-8 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-200 dark:shadow-none flex items-center gap-2"
                     >
                       <LogOut size={20} />
                       Sign Out
@@ -546,14 +590,14 @@ const AppContent = () => {
       </main>
 
       {/* Mobile Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-2 flex justify-between items-center z-50">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-4 py-2 flex justify-between items-center z-50 transition-colors">
         {navItems.map((item) => (
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id)}
             className={cn(
               "flex flex-col items-center gap-1 p-2 rounded-xl transition-all",
-              activeTab === item.id ? "text-brand-600" : "text-slate-400"
+              activeTab === item.id ? "text-brand-600" : "text-slate-400 dark:text-slate-500"
             )}
           >
             <item.icon size={20} />

@@ -30,15 +30,15 @@ export const TaskList = ({ tasks, onToggle, onDelete }: TaskListProps) => {
             className={cn(
               "group flex items-center gap-4 p-4 rounded-xl border transition-all",
               item.completed 
-                ? "bg-slate-50 border-slate-100 opacity-60" 
-                : "bg-white border-slate-200 hover:border-brand-300 shadow-sm"
+                ? "bg-slate-50 dark:bg-slate-900/40 border-slate-100 dark:border-slate-800 opacity-60" 
+                : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-brand-300 dark:hover:border-brand-700 shadow-sm"
             )}
           >
             <button
               onClick={() => onToggle(item.id)}
               className={cn(
                 "shrink-0 transition-colors",
-                item.completed ? "text-brand-500" : "text-slate-300 hover:text-brand-400"
+                item.completed ? "text-brand-500" : "text-slate-300 dark:text-slate-600 hover:text-brand-400 dark:hover:text-brand-500"
               )}
             >
               {item.completed ? <CheckCircle2 size={22} /> : <Circle size={22} />}
@@ -48,14 +48,14 @@ export const TaskList = ({ tasks, onToggle, onDelete }: TaskListProps) => {
               <div className="flex items-center gap-2">
                 {item.type === 'exam' && <GraduationCap size={14} className="text-brand-500" />}
                 <h4 className={cn(
-                  "font-medium truncate",
-                  item.completed && "line-through text-slate-500"
+                  "font-medium truncate dark:text-white",
+                  item.completed && "line-through text-slate-500 dark:text-slate-500"
                 )}>
                   {item.title}
                 </h4>
               </div>
-              <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-500">
-                <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-medium">
+              <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-600 dark:text-slate-300 font-medium">
                   {item.course}
                 </span>
                 <span className="flex items-center gap-1">
@@ -68,7 +68,7 @@ export const TaskList = ({ tasks, onToggle, onDelete }: TaskListProps) => {
                     {(item as Exam).location}
                   </span>
                 )}
-                <span className="text-[10px] text-slate-400">
+                <span className="text-[10px] text-slate-400 dark:text-slate-500">
                   Reminder: {item.reminderTime}m before
                 </span>
                 {item.priority === 'high' && (
@@ -82,7 +82,7 @@ export const TaskList = ({ tasks, onToggle, onDelete }: TaskListProps) => {
 
             <button
               onClick={() => onDelete(item.id)}
-              className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+              className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
             >
               <Trash2 size={18} />
             </button>
