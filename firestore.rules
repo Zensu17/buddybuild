@@ -1,0 +1,101 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+    
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    // User Profiles
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.uid == userId &&
+               data.email is string && isValidEmail(data.email) &&
+               (data.displayName == null || data.displayName is string) &&
+               (data.major == null || data.major is string) &&
+               (data.gpa == null || data.gpa is number);
+      }
+      
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+      
+      // Subcollections
+      match /tasks/{taskId} {
+        function isValidTask(data) {
+          return data.id == taskId && data.uid == userId &&
+                 data.title is string && data.title.size() > 0 && data.title.size() < 100 &&
+                 data.course is string && data.course.size() > 0 &&
+                 data.dueDate is string &&
+                 data.type == 'task' &&
+                 data.priority in ['low', 'medium', 'high'] &&
+                 data.completed is bool;
+        }
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidTask(request.resource.data);
+        allow update: if isOwner(userId) && isValidTask(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+      
+      match /exams/{examId} {
+        function isValidExam(data) {
+          return data.id == examId && data.uid == userId &&
+                 data.title is string && data.title.size() > 0 && data.title.size() < 100 &&
+                 data.course is string && data.course.size() > 0 &&
+                 data.dueDate is string &&
+                 data.type == 'exam' &&
+                 data.priority in ['low', 'medium', 'high'] &&
+                 data.completed is bool;
+        }
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidExam(request.resource.data);
+        allow update: if isOwner(userId) && isValidExam(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+      
+      match /schedule/{sessionId} {
+        function isValidSession(data) {
+          return data.id == sessionId && data.uid == userId &&
+                 data.name is string && data.name.size() > 0 &&
+                 data.day is int && data.day >= 0 && data.day <= 6 &&
+                 data.startTime is string && data.endTime is string;
+        }
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidSession(request.resource.data);
+        allow update: if isOwner(userId) && isValidSession(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+      
+      match /grades/{gradeId} {
+        function isValidGrade(data) {
+          return data.id == gradeId && data.uid == userId &&
+                 data.name is string && data.name.size() > 0 &&
+                 data.credits is number && data.grade is number;
+        }
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidGrade(request.resource.data);
+        allow update: if isOwner(userId) && isValidGrade(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}

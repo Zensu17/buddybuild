@@ -1,0 +1,105 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User's academic profile and settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "major": { "type": "string" },
+        "gpa": { "type": "number" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "Assignment or task for a course",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "type": { "type": "string", "enum": ["task"] },
+        "title": { "type": "string" },
+        "course": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "reminderTime": { "type": "integer" },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "completed": { "type": "boolean" },
+        "notified": { "type": "boolean" }
+      },
+      "required": ["id", "uid", "title", "course", "dueDate"]
+    },
+    "Exam": {
+      "title": "Exam",
+      "description": "Exam or quiz for a course",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "type": { "type": "string", "enum": ["exam"] },
+        "title": { "type": "string" },
+        "course": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "reminderTime": { "type": "integer" },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "completed": { "type": "boolean" },
+        "notified": { "type": "boolean" },
+        "location": { "type": "string" }
+      },
+      "required": ["id", "uid", "title", "course", "dueDate"]
+    },
+    "ClassSession": {
+      "title": "Class Session",
+      "description": "A recurring class in the weekly schedule",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "room": { "type": "string" },
+        "day": { "type": "integer" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "color": { "type": "string" }
+      },
+      "required": ["id", "uid", "name", "day", "startTime", "endTime"]
+    },
+    "CourseGrade": {
+      "title": "Course Grade",
+      "description": "Grade for a specific course",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "credits": { "type": "number" },
+        "grade": { "type": "number" }
+      },
+      "required": ["id", "uid", "name", "credits", "grade"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/users/{uid}/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "User tasks"
+    },
+    "/users/{uid}/exams/{examId}": {
+      "schema": "Exam",
+      "description": "User exams"
+    },
+    "/users/{uid}/schedule/{sessionId}": {
+      "schema": "ClassSession",
+      "description": "User class schedule"
+    },
+    "/users/{uid}/grades/{gradeId}": {
+      "schema": "CourseGrade",
+      "description": "User course grades"
+    }
+  }
+}
