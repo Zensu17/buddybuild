@@ -213,7 +213,7 @@ const AppContent = () => {
             onClick={() => setActiveTab('dashboard')}
             className="flex items-center gap-2 text-brand-600 mb-8 cursor-pointer hover:opacity-80 transition-opacity"
           >
-            <div className="w-10 h-10 bg-brand-600 rounded-2xl flex items-center justify-center text-white font-bold shadow-lg shadow-brand-200">CF</div>
+            <div className="w-10 h-10 bg-brand-600 rounded-2xl flex items-center justify-center text-white font-bold shadow-lg shadow-brand-200">BB</div>
             <h1 className="text-xl font-display font-bold text-slate-900">BuddyBuild</h1>
           </div>
 
