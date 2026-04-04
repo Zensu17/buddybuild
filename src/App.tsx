@@ -68,10 +68,10 @@ const AppContent = () => {
   const [timerMode, setTimerMode] = useState<'work' | 'break'>('work');
   
   // Notes State
-  const [notes, setNotes] = useState<string>(() => localStorage.getItem('campusflow_notes') || '');
+  const [notes, setNotes] = useState<string>(() => localStorage.getItem('buddybuild_notes') || '');
 
   useEffect(() => {
-    localStorage.setItem('campusflow_notes', notes);
+    localStorage.setItem('buddybuild_notes', notes);
   }, [notes]);
 
   useEffect(() => {
@@ -115,7 +115,7 @@ const AppContent = () => {
           <div className="w-20 h-20 bg-brand-100 text-brand-600 rounded-3xl flex items-center justify-center mx-auto mb-4">
             <GraduationCap size={40} />
           </div>
-          <h1 className="text-3xl font-display font-bold text-slate-900">CampusFlow</h1>
+          <h1 className="text-3xl font-display font-bold text-slate-900">BuddyBuild</h1>
           <p className="text-slate-500">Your ultimate university companion. Organize your tasks, schedule, and grades in one place.</p>
           <button 
             onClick={loginWithGoogle}
@@ -214,7 +214,7 @@ const AppContent = () => {
             className="flex items-center gap-2 text-brand-600 mb-8 cursor-pointer hover:opacity-80 transition-opacity"
           >
             <div className="w-10 h-10 bg-brand-600 rounded-2xl flex items-center justify-center text-white font-bold shadow-lg shadow-brand-200">CF</div>
-            <h1 className="text-xl font-display font-bold text-slate-900">CampusFlow</h1>
+            <h1 className="text-xl font-display font-bold text-slate-900">BuddyBuild</h1>
           </div>
 
           <nav className="space-y-1">
