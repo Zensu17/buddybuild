@@ -1,12 +1,23 @@
-import React, { useState } from 'react';
-import { Send, Bot, User, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Send, Bot, User, Loader2, AlertCircle, Key, Info } from 'lucide-react';
 import { askStudyBuddy } from '../services/geminiService';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import Markdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+
+declare global {
+  interface Window {
+    aistudio: {
+      hasSelectedApiKey: () => Promise<boolean>;
+      openSelectKey: () => Promise<void>;
+    };
+  }
+}
 
 interface Message {
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   content: string;
 }
 
@@ -16,6 +27,24 @@ export const StudyBuddy = () => {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(true);
+
+  useEffect(() => {
+    const checkKey = async () => {
+      if (window.aistudio) {
+        const hasKey = await window.aistudio.hasSelectedApiKey();
+        setHasApiKey(hasKey || !!process.env.GEMINI_API_KEY);
+      }
+    };
+    checkKey();
+  }, []);
+
+  const handleOpenKeyDialog = async () => {
+    if (window.aistudio) {
+      await window.aistudio.openSelectKey();
+      setHasApiKey(true);
+    }
+  };
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -26,7 +55,27 @@ export const StudyBuddy = () => {
     setIsLoading(true);
 
     const response = await askStudyBuddy(userMsg);
-    setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+    
+    if (response === "ERROR_API_KEY_MISSING" || response === "ERROR_API_KEY_INVALID") {
+      setMessages(prev => [...prev, { 
+        role: 'system', 
+        content: "It looks like your Gemini API key is missing or invalid. Please select a valid API key to continue." 
+      }]);
+      setHasApiKey(false);
+    } else if (response === "ERROR_QUOTA_EXCEEDED") {
+      setMessages(prev => [...prev, { 
+        role: 'system', 
+        content: "I've reached my limit for now. Please try again in a few minutes." 
+      }]);
+    } else if (response.startsWith("ERROR:")) {
+      setMessages(prev => [...prev, { 
+        role: 'system', 
+        content: `I'm having trouble connecting: ${response.replace("ERROR: ", "")}` 
+      }]);
+    } else {
+      setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+    }
+    
     setIsLoading(false);
   };
 
@@ -43,6 +92,15 @@ export const StudyBuddy = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {!hasApiKey && (
+            <button 
+              onClick={handleOpenKeyDialog}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-600 rounded-full text-[10px] font-bold uppercase tracking-wider hover:bg-amber-100 transition-colors"
+            >
+              <Key size={12} />
+              Select Key
+            </button>
+          )}
           <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
           <span className="text-[10px] font-bold text-slate-400 uppercase">Online</span>
         </div>
@@ -56,26 +114,53 @@ export const StudyBuddy = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className={cn(
-                "flex gap-3 max-w-[85%]",
-                msg.role === 'user' ? "ml-auto flex-row-reverse" : "mr-auto"
+                "flex gap-3",
+                msg.role === 'user' ? "ml-auto flex-row-reverse max-w-[85%]" : "mr-auto max-w-[90%]",
+                msg.role === 'system' && "mx-auto max-w-full w-full justify-center"
               )}
             >
-              <div className={cn(
-                "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-1",
-                msg.role === 'user' ? "bg-brand-100 text-brand-600" : "bg-white border border-slate-100 text-slate-400"
-              )}>
-                {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
-              </div>
-              <div className={cn(
-                "p-4 rounded-2xl text-sm leading-relaxed shadow-sm",
-                msg.role === 'user' 
-                  ? "bg-brand-600 text-white rounded-tr-none" 
-                  : "bg-white border border-slate-100 text-slate-700 rounded-tl-none"
-              )}>
-                <div className="markdown-body">
-                  <Markdown>{msg.content}</Markdown>
+              {msg.role !== 'system' && (
+                <div className={cn(
+                  "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-1",
+                  msg.role === 'user' ? "bg-brand-100 text-brand-600" : "bg-white border border-slate-100 text-slate-400"
+                )}>
+                  {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
                 </div>
-              </div>
+              )}
+              
+              {msg.role === 'system' ? (
+                <div className="bg-amber-50 border border-amber-100 text-amber-700 px-4 py-3 rounded-2xl text-xs flex items-center gap-3 shadow-sm">
+                  <AlertCircle size={16} className="shrink-0" />
+                  <div className="flex-1">
+                    <p>{msg.content}</p>
+                    {(msg.content.includes("API key") || msg.content.includes("invalid")) && (
+                      <button 
+                        onClick={handleOpenKeyDialog}
+                        className="mt-2 flex items-center gap-1.5 font-bold uppercase tracking-widest text-[10px] hover:underline"
+                      >
+                        <Key size={12} />
+                        Click here to select a key
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className={cn(
+                  "p-4 rounded-2xl text-sm leading-relaxed shadow-sm",
+                  msg.role === 'user' 
+                    ? "bg-brand-600 text-white rounded-tr-none" 
+                    : "bg-white border border-slate-100 text-slate-700 rounded-tl-none"
+                )}>
+                  <div className="markdown-body">
+                    <Markdown 
+                      remarkPlugins={[remarkMath]} 
+                      rehypePlugins={[rehypeKatex]}
+                    >
+                      {msg.content}
+                    </Markdown>
+                  </div>
+                </div>
+              )}
             </motion.div>
           ))}
         </AnimatePresence>
@@ -93,6 +178,18 @@ export const StudyBuddy = () => {
       </div>
 
       <div className="p-6 bg-white border-t border-slate-100">
+        {!hasApiKey && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3 text-blue-700 text-xs">
+            <Info size={16} />
+            <p>You may need to select an API key from the platform to use the Study Buddy.</p>
+            <button 
+              onClick={handleOpenKeyDialog}
+              className="ml-auto font-bold uppercase tracking-widest hover:underline"
+            >
+              Select
+            </button>
+          </div>
+        )}
         <div className="relative flex items-center">
           <input
             type="text"
