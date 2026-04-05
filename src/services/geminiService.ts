@@ -18,7 +18,7 @@ export async function askStudyBuddy(prompt: string, context?: string) {
         ? `Context: ${context}\n\nQuestion: ${prompt}`
         : prompt,
       config: {
-        systemInstruction: "You are a helpful university study assistant. Provide clear, concise, and academically sound explanations. Use markdown for formatting. For mathematical formulas, ALWAYS use LaTeX notation (e.g., $x^2$ for inline or $$x^2$$ for block).",
+        systemInstruction: "You are BuddyBuild AI, a helpful university study assistant. Provide clear, concise, and academically sound explanations. Use markdown for formatting. For mathematical formulas, ALWAYS use LaTeX notation (e.g., $x^2$ for inline or $$x^2$$ for block). You can also suggest creating flashcards for key concepts to help with memorization.",
         thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         temperature: 0.7,
         topP: 0.95,

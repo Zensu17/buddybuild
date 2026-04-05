@@ -23,7 +23,7 @@ interface Message {
 
 export const StudyBuddy = () => {
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: 'Hi! I am your AI Study Buddy. How can I help you with your studies today?' }
+    { role: 'assistant', content: 'Hi! I am your BuddyBuild AI assistant. How can I help you with your studies today?' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -87,7 +87,7 @@ export const StudyBuddy = () => {
             <Bot size={20} />
           </div>
           <div>
-            <h3 className="font-bold text-slate-900">AI Study Buddy</h3>
+            <h3 className="font-bold text-slate-900">BuddyBuild AI</h3>
             <p className="text-[10px] font-bold text-brand-600 uppercase tracking-widest">Powered by Gemini</p>
           </div>
         </div>

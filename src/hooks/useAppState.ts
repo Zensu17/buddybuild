@@ -11,7 +11,7 @@ import {
   FirestoreError
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
-import { AppState, Task, ClassSession, CourseGrade, Exam } from '../types';
+import { AppState, Task, ClassSession, CourseGrade, Exam, FlashcardSet } from '../types';
 
 enum OperationType {
   CREATE = 'create',
@@ -69,6 +69,7 @@ const INITIAL_STATE: AppState = {
   exams: [],
   schedule: [],
   grades: [],
+  flashcardSets: [],
   notifications: [],
 };
 
@@ -127,11 +128,17 @@ export function useAppState() {
       setState(prev => ({ ...prev, grades }));
     }, (error) => handleFirestoreError(error, OperationType.LIST, `users/${uid}/grades`));
 
+    const unsubFlashcards = onSnapshot(collection(userRef, 'flashcardSets'), (snapshot) => {
+      const flashcardSets = snapshot.docs.map(doc => doc.data() as FlashcardSet);
+      setState(prev => ({ ...prev, flashcardSets }));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, `users/${uid}/flashcardSets`));
+
     return () => {
       unsubTasks();
       unsubExams();
       unsubSchedule();
       unsubGrades();
+      unsubFlashcards();
     };
   }, [isAuthReady]);
 
@@ -309,6 +316,46 @@ export function useAppState() {
     }
   };
 
+  const addFlashcardSet = async (set: Omit<FlashcardSet, 'id' | 'uid' | 'createdAt'>) => {
+    if (!auth.currentUser) return;
+    const uid = auth.currentUser.uid;
+    const id = crypto.randomUUID();
+    const newSet: FlashcardSet = { 
+      ...set, 
+      id, 
+      uid, 
+      createdAt: new Date().toISOString() 
+    };
+    const path = `users/${uid}/flashcardSets/${id}`;
+    try {
+      await setDoc(doc(db, path), newSet);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  };
+
+  const updateFlashcardSet = async (id: string, set: Partial<FlashcardSet>) => {
+    if (!auth.currentUser) return;
+    const uid = auth.currentUser.uid;
+    const path = `users/${uid}/flashcardSets/${id}`;
+    try {
+      await setDoc(doc(db, path), set, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  };
+
+  const deleteFlashcardSet = async (id: string) => {
+    if (!auth.currentUser) return;
+    const uid = auth.currentUser.uid;
+    const path = `users/${uid}/flashcardSets/${id}`;
+    try {
+      await deleteDoc(doc(db, path));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  };
+
   return {
     state,
     addTask,
@@ -322,6 +369,9 @@ export function useAppState() {
     deleteClass,
     addGrade,
     deleteGrade,
+    addFlashcardSet,
+    updateFlashcardSet,
+    deleteFlashcardSet,
     isAuthReady
   };
 }

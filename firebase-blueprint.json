@@ -78,6 +78,30 @@
         "grade": { "type": "number" }
       },
       "required": ["id", "uid", "name", "credits", "grade"]
+    },
+    "FlashcardSet": {
+      "title": "Flashcard Set",
+      "description": "A set of flashcards for studying",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "title": { "type": "string" },
+        "course": { "type": "string" },
+        "cards": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "front": { "type": "string" },
+              "back": { "type": "string" }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "uid", "title", "course", "cards"]
     }
   },
   "firestore": {
@@ -100,6 +124,10 @@
     "/users/{uid}/grades/{gradeId}": {
       "schema": "CourseGrade",
       "description": "User course grades"
+    },
+    "/users/{uid}/flashcardSets/{setId}": {
+      "schema": "FlashcardSet",
+      "description": "User flashcard sets"
     }
   }
 }

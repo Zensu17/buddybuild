@@ -25,7 +25,8 @@ import {
   RotateCcw,
   Quote,
   StickyNote,
-  Sparkles
+  Sparkles,
+  Layers
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppState } from './hooks/useAppState';
@@ -33,6 +34,7 @@ import { TaskList } from './components/TaskList';
 import { Timetable } from './components/Timetable';
 import { GPACalculator } from './components/GPACalculator';
 import { StudyBuddy } from './components/StudyBuddy';
+import { Flashcards } from './components/Flashcards';
 import { cn } from './lib/utils';
 import { format } from 'date-fns';
 import { ReminderForm } from './components/ReminderForm';
@@ -54,7 +56,10 @@ const AppContent = () => {
     deleteExam, 
     clearNotification,
     addClass,
-    deleteClass
+    deleteClass,
+    addFlashcardSet,
+    updateFlashcardSet,
+    deleteFlashcardSet
   } = useAppState();
 
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -63,9 +68,12 @@ const AppContent = () => {
   const [searchQuery, setSearchQuery] = useState('');
   
   // Pomodoro State
+  const [workDuration, setWorkDuration] = useState(25);
+  const [breakDuration, setBreakDuration] = useState(5);
   const [timerTime, setTimerTime] = useState(25 * 60);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerMode, setTimerMode] = useState<'work' | 'break'>('work');
+  const [showTimerSettings, setShowTimerSettings] = useState(false);
   
   // Notes State
   const [notes, setNotes] = useState<string>(() => localStorage.getItem('buddybuild_notes') || '');
@@ -84,7 +92,7 @@ const AppContent = () => {
       setIsTimerRunning(false);
       const nextMode = timerMode === 'work' ? 'break' : 'work';
       setTimerMode(nextMode);
-      setTimerTime(nextMode === 'work' ? 25 * 60 : 5 * 60);
+      setTimerTime(nextMode === 'work' ? workDuration * 60 : breakDuration * 60);
       alert(nextMode === 'work' ? "Break's over! Time to focus." : "Great job! Take a short break.");
     }
     return () => clearInterval(interval);
@@ -133,6 +141,7 @@ const AppContent = () => {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'schedule', label: 'Schedule', icon: Calendar },
     { id: 'tasks', label: 'Reminders', icon: CheckSquare },
+    { id: 'flashcards', label: 'Flashcards', icon: Layers },
     { id: 'gpa', label: 'GPA Tracker', icon: GraduationCap },
     { id: 'ai', label: 'Study Buddy', icon: MessageSquare },
     { id: 'settings', label: 'Settings', icon: Settings },
@@ -239,7 +248,7 @@ const AppContent = () => {
         <div className="mt-auto p-6 border-t border-slate-100">
           <div className="flex items-center gap-3 mb-6 px-2">
             <div className="w-10 h-10 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold overflow-hidden border-2 border-white shadow-sm">
-              {user.photoURL ? <img src={user.photoURL} alt="User" referrerPolicy="no-referrer" /> : user.displayName?.charAt(0) || 'U'}
+              {user.photoURL ? <img src={user.photoURL} alt="User" className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : user.displayName?.charAt(0) || 'U'}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-slate-900 truncate">{user.displayName || 'Student'}</p>
@@ -265,17 +274,17 @@ const AppContent = () => {
               onClick={() => setActiveTab('dashboard')}
               className="lg:hidden flex items-center gap-2 text-brand-600 cursor-pointer"
             >
-              <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white font-bold">C</div>
+              <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white font-bold">B</div>
             </div>
 
-            <div className="flex flex-1 md:flex-none items-center bg-slate-100 rounded-full px-4 py-2 max-w-md transition-colors mx-4">
-              <Search size={18} className="text-slate-400 shrink-0" />
+            <div className="flex flex-1 md:flex-none items-center bg-slate-100 rounded-full px-3 md:px-4 py-2 max-w-[160px] md:max-w-md transition-all mx-2 md:mx-4">
+              <Search size={16} className="text-slate-400 shrink-0" />
               <input 
                 type="text" 
-                placeholder="Search everything..." 
+                placeholder="Search..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-transparent border-none focus:ring-0 text-sm ml-2 w-full"
+                className="bg-transparent border-none focus:ring-0 text-xs md:text-sm ml-1 md:ml-2 w-full"
               />
               {searchQuery && (
                 <button onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600">
@@ -306,7 +315,7 @@ const AppContent = () => {
                   onClick={() => setActiveTab('settings')}
                   className="w-10 h-10 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold overflow-hidden border-2 border-transparent hover:border-brand-500 transition-all"
                 >
-                  {user.photoURL ? <img src={user.photoURL} alt="User" referrerPolicy="no-referrer" /> : user.displayName?.charAt(0) || 'U'}
+                  {user.photoURL ? <img src={user.photoURL} alt="User" className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : user.displayName?.charAt(0) || 'U'}
                 </button>
               </div>
             </div>
@@ -314,7 +323,7 @@ const AppContent = () => {
         </header>
 
         {/* Content Area */}
-        <div className="p-4 lg:p-8 max-w-7xl mx-auto">
+        <div className="p-4 lg:p-8 max-w-7xl mx-auto pb-24 lg:pb-8">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -327,8 +336,8 @@ const AppContent = () => {
                 <div className="space-y-8">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                      <h2 className="text-3xl font-display font-bold text-slate-900">Welcome back, {user.displayName?.split(' ')[0] || 'Student'}!</h2>
-                      <p className="text-slate-500">Here's what's happening on campus today.</p>
+                      <h2 className="text-2xl md:text-3xl font-display font-bold text-slate-900">Welcome back, {user.displayName?.split(' ')[0] || 'Student'}!</h2>
+                      <p className="text-sm md:text-base text-slate-500">Here's what's happening on campus today.</p>
                     </div>
                     <div className="flex gap-3">
                       <button 
@@ -350,43 +359,45 @@ const AppContent = () => {
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Today's Classes */}
-                    <div className="lg:col-span-2 space-y-6">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                          <Calendar size={20} className="text-brand-500" />
-                          Today's Classes
-                        </h3>
-                        <span className="text-xs font-medium text-slate-400">{format(new Date(), 'EEEE, MMMM d')}</span>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {todayClasses.length > 0 ? (
-                          todayClasses.map(session => (
-                            <div key={session.id} className="glass p-5 rounded-3xl card-hover border-l-4 relative group" style={{ borderLeftColor: session.color }}>
-                              <div className="flex justify-between items-start mb-4">
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{session.startTime} - {session.endTime}</span>
-                                <div className="flex items-center gap-2">
-                                  <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-1 rounded-full font-bold uppercase">{session.room}</span>
-                                  <button 
-                                    onClick={() => deleteClass(session.id)}
-                                    className="p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
+                    <div className="lg:col-span-2 space-y-8 order-2 lg:order-1">
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold flex items-center gap-2">
+                            <Calendar size={20} className="text-brand-500" />
+                            Today's Classes
+                          </h3>
+                          <span className="text-xs font-medium text-slate-400">{format(new Date(), 'EEEE, MMMM d')}</span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {todayClasses.length > 0 ? (
+                            todayClasses.map(session => (
+                              <div key={session.id} className="glass p-5 rounded-3xl card-hover border-l-4 relative group" style={{ borderLeftColor: session.color }}>
+                                <div className="flex justify-between items-start mb-4">
+                                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{session.startTime} - {session.endTime}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-1 rounded-full font-bold uppercase">{session.room}</span>
+                                    <button 
+                                      onClick={() => deleteClass(session.id)}
+                                      className="p-1 text-slate-300 hover:text-red-500 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
                                 </div>
+                                <h4 className="text-lg font-bold text-slate-800 mb-1">{session.name}</h4>
+                                <p className="text-sm text-slate-500">Main Campus • Building B</p>
                               </div>
-                              <h4 className="text-lg font-bold text-slate-800 mb-1">{session.name}</h4>
-                              <p className="text-sm text-slate-500">Main Campus • Building B</p>
+                            ))
+                          ) : (
+                            <div className="col-span-full p-12 glass rounded-3xl text-center text-slate-400 italic flex flex-col items-center gap-3">
+                              <Sparkles size={32} className="opacity-20" />
+                              <p>{searchQuery ? "No classes match your search." : "No classes scheduled for today. Enjoy your break!"}</p>
                             </div>
-                          ))
-                        ) : (
-                          <div className="col-span-full p-12 glass rounded-3xl text-center text-slate-400 italic flex flex-col items-center gap-3">
-                            <Sparkles size={32} className="opacity-20" />
-                            <p>{searchQuery ? "No classes match your search." : "No classes scheduled for today. Enjoy your break!"}</p>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
 
-                      <div className="mt-8 space-y-4">
+                      <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <h3 className="text-lg font-semibold flex items-center gap-2">
                             <CheckSquare size={20} className="text-brand-500" />
@@ -413,33 +424,94 @@ const AppContent = () => {
                     </div>
 
                     {/* Sidebar Widgets */}
-                    <div className="space-y-8">
+                    <div className="space-y-8 order-1 lg:order-2">
                       {/* Pomodoro Timer */}
-                      <div className="glass rounded-[2rem] p-6 text-center space-y-4 border-2 border-brand-100">
-                        <div className="flex items-center justify-center gap-2 text-brand-600 mb-2">
-                          <Timer size={20} />
-                          <span className="text-xs font-bold uppercase tracking-widest">{timerMode === 'work' ? 'Focus Session' : 'Short Break'}</span>
-                        </div>
-                        <div className="text-5xl font-display font-bold text-slate-900 tabular-nums">
-                          {formatTime(timerTime)}
-                        </div>
-                        <div className="flex items-center justify-center gap-3">
+                      <div className="glass rounded-[2rem] p-6 text-center space-y-4 border-2 border-brand-100 relative overflow-hidden">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2 text-brand-600">
+                            <Timer size={20} />
+                            <span className="text-xs font-bold uppercase tracking-widest">{timerMode === 'work' ? 'Focus Session' : 'Short Break'}</span>
+                          </div>
                           <button 
-                            onClick={() => setIsTimerRunning(!isTimerRunning)}
-                            className="w-12 h-12 rounded-full bg-brand-600 text-white flex items-center justify-center hover:bg-brand-700 transition-all shadow-lg shadow-brand-200"
+                            onClick={() => setShowTimerSettings(!showTimerSettings)}
+                            className="p-1.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-all"
                           >
-                            {isTimerRunning ? <Pause size={20} /> : <Play size={20} className="ml-1" />}
-                          </button>
-                          <button 
-                            onClick={() => {
-                              setIsTimerRunning(false);
-                              setTimerTime(timerMode === 'work' ? 25 * 60 : 5 * 60);
-                            }}
-                            className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200 transition-all"
-                          >
-                            <RotateCcw size={18} />
+                            <Settings size={16} />
                           </button>
                         </div>
+
+                        <AnimatePresence mode="wait">
+                          {showTimerSettings ? (
+                            <motion.div 
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              className="space-y-4 py-2"
+                            >
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold text-slate-400 uppercase">Work (min)</label>
+                                  <input 
+                                    type="number" 
+                                    value={workDuration}
+                                    onChange={(e) => {
+                                      const val = Math.max(1, parseInt(e.target.value) || 1);
+                                      setWorkDuration(val);
+                                      if (timerMode === 'work' && !isTimerRunning) setTimerTime(val * 60);
+                                    }}
+                                    className="w-full bg-slate-50 border-none rounded-xl px-3 py-2 text-sm font-bold text-center focus:ring-2 focus:ring-brand-500"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold text-slate-400 uppercase">Break (min)</label>
+                                  <input 
+                                    type="number" 
+                                    value={breakDuration}
+                                    onChange={(e) => {
+                                      const val = Math.max(1, parseInt(e.target.value) || 1);
+                                      setBreakDuration(val);
+                                      if (timerMode === 'break' && !isTimerRunning) setTimerTime(val * 60);
+                                    }}
+                                    className="w-full bg-slate-50 border-none rounded-xl px-3 py-2 text-sm font-bold text-center focus:ring-2 focus:ring-brand-500"
+                                  />
+                                </div>
+                              </div>
+                              <button 
+                                onClick={() => setShowTimerSettings(false)}
+                                className="w-full py-2 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-all"
+                              >
+                                Save Settings
+                              </button>
+                            </motion.div>
+                          ) : (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.95 }}
+                            >
+                              <div className="text-5xl font-display font-bold text-slate-900 tabular-nums mb-4">
+                                {formatTime(timerTime)}
+                              </div>
+                              <div className="flex items-center justify-center gap-3">
+                                <button 
+                                  onClick={() => setIsTimerRunning(!isTimerRunning)}
+                                  className="w-12 h-12 rounded-full bg-brand-600 text-white flex items-center justify-center hover:bg-brand-700 transition-all shadow-lg shadow-brand-200"
+                                >
+                                  {isTimerRunning ? <Pause size={20} /> : <Play size={20} className="ml-1" />}
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    setIsTimerRunning(false);
+                                    setTimerTime(timerMode === 'work' ? workDuration * 60 : breakDuration * 60);
+                                  }}
+                                  className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200 transition-all"
+                                >
+                                  <RotateCcw size={18} />
+                                </button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
 
                       {/* Daily Motivation */}
@@ -470,6 +542,34 @@ const AppContent = () => {
                           className="flex-1 w-full bg-slate-50/50 border-none rounded-xl p-3 text-sm resize-none focus:ring-2 focus:ring-brand-500 outline-none transition-all placeholder:text-slate-400"
                         />
                       </div>
+
+                      {/* Flashcard Quick Access */}
+                      {state.flashcardSets.length > 0 && (
+                        <div className="glass rounded-[2rem] p-6 space-y-4">
+                          <h4 className="font-semibold flex items-center gap-2">
+                            <Layers size={18} className="text-brand-500" />
+                            Flashcard Sets
+                          </h4>
+                          <div className="space-y-2">
+                            {state.flashcardSets.slice(0, 2).map(set => (
+                              <button 
+                                key={set.id}
+                                onClick={() => setActiveTab('flashcards')}
+                                className="w-full p-3 bg-white border border-slate-100 rounded-2xl text-left hover:bg-brand-50 transition-all group"
+                              >
+                                <p className="text-xs font-bold text-slate-900 group-hover:text-brand-600 transition-colors">{set.title}</p>
+                                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">{set.course}</p>
+                              </button>
+                            ))}
+                            <button 
+                              onClick={() => setActiveTab('flashcards')}
+                              className="w-full py-2 text-[10px] font-bold text-brand-600 uppercase tracking-widest hover:underline"
+                            >
+                              View all sets
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -572,6 +672,15 @@ const AppContent = () => {
                 </div>
               )}
 
+              {activeTab === 'flashcards' && (
+                <Flashcards 
+                  sets={state.flashcardSets} 
+                  onAdd={addFlashcardSet} 
+                  onUpdate={updateFlashcardSet} 
+                  onDelete={deleteFlashcardSet} 
+                />
+              )}
+
               {activeTab === 'settings' && (
                 <div className="space-y-8">
                   <div>
@@ -584,7 +693,7 @@ const AppContent = () => {
                       <h3 className="text-xl font-bold text-slate-900">Profile Information</h3>
                       <div className="flex items-center gap-4">
                         <div className="w-20 h-20 rounded-3xl bg-brand-100 text-brand-600 flex items-center justify-center font-bold text-2xl overflow-hidden border-2 border-white shadow-sm">
-                          {user.photoURL ? <img src={user.photoURL} alt="User" referrerPolicy="no-referrer" /> : user.displayName?.charAt(0) || 'U'}
+                          {user.photoURL ? <img src={user.photoURL} alt="User" className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : user.displayName?.charAt(0) || 'U'}
                         </div>
                         <div>
                           <p className="text-lg font-bold text-slate-900">{user.displayName || 'Student'}</p>
@@ -634,18 +743,33 @@ const AppContent = () => {
       </main>
 
       {/* Mobile Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-2 flex justify-between items-center z-50 transition-colors shadow-[0_-8px_30px_rgba(0,0,0,0.05)]">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-1 py-2 grid grid-cols-7 items-center z-50 transition-colors shadow-[0_-8px_30px_rgba(0,0,0,0.05)]">
         {navItems.map((item) => (
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id)}
             className={cn(
-              "flex flex-col items-center gap-1 p-2 rounded-xl transition-all",
+              "flex flex-col items-center gap-1 p-1 rounded-xl transition-all",
               activeTab === item.id ? "text-brand-600" : "text-slate-400"
             )}
           >
-            <item.icon size={20} />
-            <span className="text-[10px] font-medium">{item.label.split(' ')[0]}</span>
+            {item.id === 'settings' ? (
+              <div className={cn(
+                "w-6 h-6 rounded-full overflow-hidden border-2 transition-all",
+                activeTab === 'settings' ? "border-brand-600 scale-110" : "border-slate-200"
+              )}>
+                {user.photoURL ? (
+                  <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  <div className="w-full h-full bg-brand-100 text-brand-600 flex items-center justify-center text-[10px] font-bold">
+                    {user.displayName?.charAt(0) || 'U'}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <item.icon size={20} />
+            )}
+            <span className="text-[9px] font-bold uppercase tracking-tighter">{item.label.split(' ')[0]}</span>
           </button>
         ))}
       </nav>

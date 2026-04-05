@@ -79,7 +79,7 @@ export const TaskList = ({ tasks, onToggle, onDelete }: TaskListProps) => {
 
             <button
               onClick={() => onDelete(item.id)}
-              className="p-2 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+              className="p-2 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
             >
               <Trash2 size={20} />
             </button>

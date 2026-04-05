@@ -42,10 +42,26 @@ export interface CourseGrade {
   grade: number; // 0.0 - 4.0
 }
 
+export interface Flashcard {
+  id: string;
+  front: string;
+  back: string;
+}
+
+export interface FlashcardSet {
+  id: string;
+  uid: string;
+  title: string;
+  course: string;
+  cards: Flashcard[];
+  createdAt: string;
+}
+
 export interface AppState {
   tasks: Task[];
   exams: Exam[];
   schedule: ClassSession[];
   grades: CourseGrade[];
+  flashcardSets: FlashcardSet[];
   notifications: { id: string; message: string; timestamp: string }[];
 }
