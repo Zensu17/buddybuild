@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   collection, 
   onSnapshot, 
@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { AppState, Task, ClassSession, CourseGrade, Exam, FlashcardSet } from '../types';
+import confetti from 'canvas-confetti';
 
 enum OperationType {
   CREATE = 'create',
@@ -70,6 +71,11 @@ const INITIAL_STATE: AppState = {
   schedule: [],
   grades: [],
   flashcardSets: [],
+  settings: {
+    notificationsEnabled: true,
+    pomodoroAutoStart: false,
+    theme: 'light',
+  },
   notifications: [],
 };
 
@@ -101,12 +107,33 @@ export function useAppState() {
   // Real-time Sync
   useEffect(() => {
     if (!isAuthReady || !auth.currentUser) {
-      setState(INITIAL_STATE);
+      if (isAuthReady && !auth.currentUser) {
+        setState(INITIAL_STATE);
+      }
       return;
     }
 
     const uid = auth.currentUser.uid;
     const userRef = doc(db, 'users', uid);
+
+    // Sync User Stats & Settings
+    const unsubUser = onSnapshot(userRef, (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        setState(prev => ({
+          ...prev,
+          settings: data.settings || INITIAL_STATE.settings,
+        }));
+      } else {
+        // Initialize user doc if it doesn't exist
+        setDoc(userRef, {
+          uid,
+          email: auth.currentUser?.email,
+          displayName: auth.currentUser?.displayName,
+          settings: INITIAL_STATE.settings
+        }, { merge: true });
+      }
+    });
 
     const unsubTasks = onSnapshot(collection(userRef, 'tasks'), (snapshot) => {
       const tasks = snapshot.docs.map(doc => doc.data() as Task);
@@ -134,6 +161,7 @@ export function useAppState() {
     }, (error) => handleFirestoreError(error, OperationType.LIST, `users/${uid}/flashcardSets`));
 
     return () => {
+      unsubUser();
       unsubTasks();
       unsubExams();
       unsubSchedule();
@@ -144,6 +172,8 @@ export function useAppState() {
 
   // Notification Checker
   useEffect(() => {
+    if (!state.settings.notificationsEnabled) return;
+
     const interval = setInterval(() => {
       const now = new Date().getTime();
       const newNotifications: { id: string; message: string; timestamp: string }[] = [];
@@ -153,7 +183,7 @@ export function useAppState() {
           if (item.completed || item.notified) return;
           
           const deadline = new Date(item.dueDate).getTime();
-          const reminderMs = item.reminderTime * 60 * 1000;
+          const reminderMs = (item.reminderTime || 0) * 60 * 1000;
           
           if (now >= (deadline - reminderMs)) {
             newNotifications.push({
@@ -188,7 +218,18 @@ export function useAppState() {
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [state.tasks, state.exams, isAuthReady]);
+  }, [state.tasks, state.exams, isAuthReady, state.settings.notificationsEnabled]);
+
+  const updateSettings = async (settings: Partial<AppState['settings']>) => {
+    if (!auth.currentUser) return;
+    const uid = auth.currentUser.uid;
+    const userRef = doc(db, 'users', uid);
+    try {
+      await setDoc(userRef, { settings: { ...state.settings, ...settings } }, { merge: true });
+    } catch (error) {
+      console.error("Error updating settings:", error);
+    }
+  };
 
   const addTask = async (task: Omit<Task, 'id' | 'completed' | 'type' | 'uid'>) => {
     if (!auth.currentUser) return;
@@ -223,7 +264,8 @@ export function useAppState() {
     if (!task) return;
     const path = `users/${uid}/tasks/${id}`;
     try {
-      await setDoc(doc(db, path), { ...task, completed: !task.completed }, { merge: true });
+      const isCompleting = !task.completed;
+      await setDoc(doc(db, path), { ...task, completed: isCompleting }, { merge: true });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, path);
     }
@@ -236,7 +278,8 @@ export function useAppState() {
     if (!exam) return;
     const path = `users/${uid}/exams/${id}`;
     try {
-      await setDoc(doc(db, path), { ...exam, completed: !exam.completed }, { merge: true });
+      const isCompleting = !exam.completed;
+      await setDoc(doc(db, path), { ...exam, completed: isCompleting }, { merge: true });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, path);
     }
@@ -372,6 +415,7 @@ export function useAppState() {
     addFlashcardSet,
     updateFlashcardSet,
     deleteFlashcardSet,
+    updateSettings,
     isAuthReady
   };
 }

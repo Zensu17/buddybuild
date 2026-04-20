@@ -9,7 +9,15 @@
         "email": { "type": "string", "format": "email" },
         "displayName": { "type": "string" },
         "major": { "type": "string" },
-        "gpa": { "type": "number" }
+        "gpa": { "type": "number" },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "notificationsEnabled": { "type": "boolean" },
+            "pomodoroAutoStart": { "type": "boolean" },
+            "theme": { "type": "string", "enum": ["light", "dark"] }
+          }
+        }
       },
       "required": ["uid", "email"]
     },

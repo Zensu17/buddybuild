@@ -72,75 +72,106 @@ export const Flashcards = ({ sets, onAdd, onUpdate, onDelete }: FlashcardsProps)
     const currentCard = activeSet.cards[currentCardIndex];
     return (
       <div className="space-y-8">
-        <div className="flex items-center justify-between">
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex items-center justify-between"
+        >
           <button 
             onClick={() => setStudyMode(false)}
-            className="flex items-center gap-2 text-slate-500 hover:text-brand-600 transition-colors font-medium"
+            className="flex items-center gap-2 text-slate-500 hover:text-brand-600 transition-colors font-bold group"
           >
-            <ChevronLeft size={20} />
+            <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center group-hover:bg-brand-50 transition-colors">
+              <ChevronLeft size={18} />
+            </div>
             Back to Sets
           </button>
-          <div className="text-sm font-bold text-slate-400 uppercase tracking-widest">
-            Card {currentCardIndex + 1} of {activeSet.cards.length}
+          <div className="text-sm font-bold text-slate-400 uppercase tracking-widest bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-100 italic">
+            Card {currentCardIndex + 1} <span className="mx-1 opacity-30">/</span> {activeSet.cards.length}
           </div>
-        </div>
+        </motion.div>
 
         <div className="max-w-xl mx-auto">
-          <div 
-            className="relative h-80 perspective-1000 cursor-pointer"
-            onClick={() => setIsFlipped(!isFlipped)}
-          >
-            <motion.div
-              animate={{ rotateY: isFlipped ? 180 : 0 }}
-              transition={{ duration: 0.6, type: 'spring', stiffness: 260, damping: 20 }}
-              className="w-full h-full relative preserve-3d"
+          <AnimatePresence mode="wait">
+            <motion.div 
+              key={currentCardIndex}
+              initial={{ opacity: 0, scale: 0.9, rotateY: isFlipped ? 180 : 0 }}
+              animate={{ opacity: 1, scale: 1, rotateY: isFlipped ? 180 : 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+              className="relative h-96 perspective-1000 cursor-pointer group"
+              onClick={() => setIsFlipped(!isFlipped)}
             >
-              {/* Front */}
-              <div className="absolute inset-0 backface-hidden glass rounded-[2.5rem] border-2 border-brand-100 flex flex-col items-center justify-center p-8 text-center shadow-xl">
-                <span className="absolute top-6 left-6 text-[10px] font-bold text-brand-400 uppercase tracking-widest">Question</span>
-                <h3 className="text-2xl font-bold text-slate-800">{currentCard.front}</h3>
-                <div className="absolute bottom-6 flex items-center gap-2 text-slate-400 text-xs font-medium">
-                  <RotateCw size={14} />
-                  Click to flip
-                </div>
-              </div>
-
-              {/* Back */}
-              <div 
-                className="absolute inset-0 backface-hidden glass rounded-[2.5rem] border-2 border-brand-500 flex flex-col items-center justify-center p-8 text-center shadow-xl"
-                style={{ transform: 'rotateY(180deg)' }}
+              <motion.div
+                animate={{ rotateY: isFlipped ? 180 : 0 }}
+                transition={{ 
+                  duration: 0.5, 
+                  type: 'spring', 
+                  stiffness: 260, 
+                  damping: 18 
+                }}
+                style={{ transformStyle: 'preserve-3d' }}
+                className="w-full h-full relative preserve-3d"
               >
-                <span className="absolute top-6 left-6 text-[10px] font-bold text-brand-600 uppercase tracking-widest">Answer</span>
-                <p className="text-xl text-slate-700 leading-relaxed">{currentCard.back}</p>
-                <div className="absolute bottom-6 flex items-center gap-2 text-slate-400 text-xs font-medium">
-                  <RotateCw size={14} />
-                  Click to flip
+                {/* Front */}
+                <div className="absolute inset-0 backface-hidden glass rounded-[3rem] border-2 border-brand-100 flex flex-col items-center justify-center p-8 text-center shadow-2xl overflow-hidden bg-white">
+                  <div className="absolute inset-0 bg-gradient-to-br from-brand-50/50 to-transparent pointer-events-none"></div>
+                  <motion.span 
+                    animate={{ y: [0, -5, 0] }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                    className="absolute top-8 left-8 text-[10px] font-bold text-brand-600 uppercase tracking-widest bg-brand-50 px-3 py-1.5 rounded-full border border-brand-100"
+                  >
+                    Question
+                  </motion.span>
+                  <h3 className="text-3xl font-display font-extrabold text-slate-800 relative z-10 leading-tight">{currentCard.front}</h3>
+                  <div className="absolute bottom-8 flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-widest animate-float opacity-60">
+                    <RotateCw size={14} className="text-brand-500" />
+                    Tap to reveal
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          </div>
 
-          <div className="flex items-center justify-center gap-6 mt-8">
-            <button
+                {/* Back */}
+                <div 
+                  className="absolute inset-0 backface-hidden glass rounded-[3rem] border-2 border-brand-500 bg-brand-50/10 flex flex-col items-center justify-center p-8 text-center shadow-2xl overflow-hidden"
+                  style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden' }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-tr from-brand-100/20 to-transparent pointer-events-none"></div>
+                  <span className="absolute top-8 left-8 text-[10px] font-bold text-slate-100 uppercase tracking-widest bg-brand-600 px-3 py-1.5 rounded-full shadow-lg shadow-brand-200">Answer</span>
+                  <p className="text-2xl font-display font-bold text-slate-800 leading-relaxed relative z-10">{currentCard.back}</p>
+                  <div className="absolute bottom-8 flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-widest opacity-60">
+                    <RotateCw size={14} />
+                    Tap to hide
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          </AnimatePresence>
+
+          <div className="flex items-center justify-center gap-6 mt-12">
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
               disabled={currentCardIndex === 0}
               onClick={() => {
                 setCurrentCardIndex(prev => prev - 1);
                 setIsFlipped(false);
               }}
-              className="w-12 h-12 rounded-full bg-white border border-slate-200 text-slate-600 flex items-center justify-center hover:bg-slate-50 disabled:opacity-30 transition-all shadow-sm"
+              className="w-14 h-14 rounded-full bg-white border border-slate-200 text-slate-600 flex items-center justify-center hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-md group"
             >
-              <ChevronLeft size={24} />
-            </button>
-            <button
+              <ChevronLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
               disabled={currentCardIndex === activeSet.cards.length - 1}
               onClick={() => {
                 setCurrentCardIndex(prev => prev + 1);
                 setIsFlipped(false);
               }}
-              className="w-12 h-12 rounded-full bg-brand-600 text-white flex items-center justify-center hover:bg-brand-700 disabled:opacity-30 transition-all shadow-lg shadow-brand-200"
+              className="w-14 h-14 rounded-full bg-brand-600 text-white flex items-center justify-center hover:bg-brand-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-xl shadow-brand-200 group"
             >
-              <ChevronRight size={24} />
-            </button>
+              <ChevronRight size={24} className="group-hover:translate-x-1 transition-transform" />
+            </motion.button>
           </div>
         </div>
       </div>

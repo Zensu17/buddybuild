@@ -63,5 +63,10 @@ export interface AppState {
   schedule: ClassSession[];
   grades: CourseGrade[];
   flashcardSets: FlashcardSet[];
+  settings: {
+    notificationsEnabled: boolean;
+    pomodoroAutoStart: boolean;
+    theme: 'light' | 'dark';
+  };
   notifications: { id: string; message: string; timestamp: string }[];
 }

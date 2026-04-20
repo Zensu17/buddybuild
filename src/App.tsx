@@ -59,7 +59,9 @@ const AppContent = () => {
     deleteClass,
     addFlashcardSet,
     updateFlashcardSet,
-    deleteFlashcardSet
+    deleteFlashcardSet,
+    updateSettings,
+    isAuthReady
   } = useAppState();
 
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -228,21 +230,37 @@ const AppContent = () => {
 
           <nav className="space-y-1">
             {navItems.map((item) => (
-              <button
+              <motion.button
                 key={item.id}
+                whileHover={{ x: 4 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setActiveTab(item.id)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all",
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all group",
                   activeTab === item.id 
                     ? "bg-brand-600 text-white shadow-lg shadow-brand-100" 
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                    : "text-slate-500 hover:bg-brand-50 hover:text-brand-600"
                 )}
               >
-                <item.icon size={20} />
+                <item.icon size={20} className={cn(
+                  "transition-transform duration-300",
+                  activeTab === item.id ? "scale-110" : "group-hover:scale-110"
+                )} />
                 {item.label}
-              </button>
+              </motion.button>
             ))}
           </nav>
+
+          {/* Interactive Affirmation Sidebar */}
+          <div className="mt-8 p-4 bg-white rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden group hover:border-brand-200 transition-colors">
+            <div className="absolute -right-2 -bottom-2 opacity-5 group-hover:scale-110 transition-transform duration-700">
+              <Sparkles size={60} />
+            </div>
+            <div className="relative z-10">
+              <span className="text-[9px] font-bold text-brand-600 uppercase tracking-widest block mb-2">Soul Focus</span>
+              <p className="text-[11px] leading-relaxed text-slate-600 font-medium italic">"Progress is not in enhancing what is, but in advancing toward what will be."</p>
+            </div>
+          </div>
         </div>
 
         <div className="mt-auto p-6 border-t border-slate-100">
@@ -371,7 +389,15 @@ const AppContent = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {todayClasses.length > 0 ? (
                             todayClasses.map(session => (
-                              <div key={session.id} className="glass p-5 rounded-3xl card-hover border-l-4 relative group" style={{ borderLeftColor: session.color }}>
+                              <motion.div 
+                                key={session.id} 
+                                layout
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                whileHover={{ scale: 1.02, y: -5 }}
+                                className="glass p-5 rounded-3xl card-hover border-l-4 relative group cursor-pointer shadow-sm hover:shadow-xl transition-all duration-300" 
+                                style={{ borderLeftColor: session.color }}
+                              >
                                 <div className="flex justify-between items-start mb-4">
                                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{session.startTime} - {session.endTime}</span>
                                   <div className="flex items-center gap-2">
@@ -386,7 +412,7 @@ const AppContent = () => {
                                 </div>
                                 <h4 className="text-lg font-bold text-slate-800 mb-1">{session.name}</h4>
                                 <p className="text-sm text-slate-500">Main Campus • Building B</p>
-                              </div>
+                              </motion.div>
                             ))
                           ) : (
                             <div className="col-span-full p-12 glass rounded-3xl text-center text-slate-400 italic flex flex-col items-center gap-3">
@@ -425,6 +451,52 @@ const AppContent = () => {
 
                     {/* Sidebar Widgets */}
                     <div className="space-y-8 order-1 lg:order-2">
+                      {/* Study Pulse (Interactive Affirmation) */}
+                      <motion.div 
+                        whileHover={{ scale: 1.02 }}
+                        className="bg-gradient-to-br from-indigo-600 via-brand-600 to-indigo-700 rounded-[2rem] p-8 text-white shadow-2xl shadow-brand-200 relative overflow-hidden group cursor-pointer"
+                      >
+                        <motion.div 
+                          animate={{ 
+                            scale: [1, 1.2, 1],
+                            rotate: [0, 90, 0],
+                            opacity: [0.1, 0.2, 0.1]
+                          }}
+                          transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                          className="absolute -right-10 -top-10"
+                        >
+                          <Sparkles size={200} />
+                        </motion.div>
+                        
+                        <div className="relative z-10 text-center">
+                          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6 backdrop-blur-md group-hover:bg-white/30 transition-colors">
+                            <Sparkles size={32} className="text-white" />
+                          </div>
+                          <h3 className="text-sm font-bold uppercase tracking-[0.2em] mb-4 opacity-80">Today's Focus</h3>
+                          <AnimatePresence mode="wait">
+                            <motion.p 
+                              key="affirmation"
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              className="text-xl font-display font-bold leading-tight"
+                            >
+                              "Focus on being productive instead of busy."
+                            </motion.p>
+                          </AnimatePresence>
+                          <div className="mt-8 flex justify-center gap-1">
+                            {[1, 2, 3].map((i) => (
+                              <motion.div 
+                                key={i}
+                                animate={{ scale: [1, 1.5, 1], opacity: [0.4, 1, 0.4] }}
+                                transition={{ duration: 2, repeat: Infinity, delay: i * 0.4 }}
+                                className="w-1.5 h-1.5 bg-white rounded-full"
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+
                       {/* Pomodoro Timer */}
                       <div className="glass rounded-[2rem] p-6 text-center space-y-4 border-2 border-brand-100 relative overflow-hidden">
                         <div className="flex items-center justify-between mb-2">
@@ -514,20 +586,47 @@ const AppContent = () => {
                         </AnimatePresence>
                       </div>
 
-                      {/* Daily Motivation */}
-                      <div className="bg-gradient-to-br from-brand-600 to-brand-800 rounded-[2rem] p-6 text-white shadow-xl shadow-brand-100 relative overflow-hidden">
-                        <Quote size={48} className="absolute -left-2 -top-2 text-white/10" />
-                        <div className="relative z-10">
-                          <h4 className="text-brand-100 text-[10px] font-bold uppercase tracking-widest mb-3">Daily Motivation</h4>
-                          <p className="text-sm font-medium leading-relaxed italic mb-4">
-                            "The expert in anything was once a beginner."
-                          </p>
-                          <div className="flex items-center gap-2 text-[10px] bg-white/10 w-fit px-2 py-1 rounded-full">
-                            <Sparkles size={12} />
-                            <span>Stay Focused</span>
+                      {/* Study Impulse (Interactive Mindful Widget) */}
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        whileHover={{ y: -5 }}
+                        className="bg-white rounded-[2rem] p-8 border border-brand-100 shadow-xl shadow-brand-50 relative overflow-hidden group cursor-pointer"
+                      >
+                        <motion.div 
+                          animate={{ 
+                            scale: [1, 1.1, 1],
+                            opacity: [0.3, 0.5, 0.3],
+                          }}
+                          transition={{ duration: 4, repeat: Infinity }}
+                          className="absolute -right-6 -top-6 w-32 h-32 bg-brand-100 rounded-full blur-3xl"
+                        />
+                        <div className="relative z-10 text-center space-y-4">
+                          <motion.div 
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                            className="w-12 h-12 bg-brand-50 text-brand-600 rounded-2xl flex items-center justify-center mx-auto"
+                          >
+                            <Sparkles size={24} />
+                          </motion.div>
+                          <div>
+                            <h4 className="text-[10px] font-bold text-brand-600 uppercase tracking-[0.2em] mb-2">Internal Vitals</h4>
+                            <p className="text-sm font-medium text-slate-700 italic px-2 leading-relaxed">
+                              "You don't have to be great to start, but you have to start to be great."
+                            </p>
+                          </div>
+                          <div className="pt-2 flex justify-center gap-1">
+                            {[1, 2, 3, 4].map(i => (
+                              <motion.div 
+                                key={i}
+                                animate={{ height: [4, 12, 4] }}
+                                transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
+                                className="w-1 bg-brand-400 rounded-full"
+                              />
+                            ))}
                           </div>
                         </div>
-                      </div>
+                      </motion.div>
 
                       {/* Quick Notes */}
                       <div className="glass rounded-[2rem] p-6 flex flex-col min-h-[250px]">
@@ -711,11 +810,30 @@ const AppContent = () => {
                       <div className="space-y-4">
                         <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
                           <div>
-                            <p className="font-bold text-slate-900">Push Notifications</p>
+                            <p className="font-bold text-slate-900">Study Notifications</p>
                             <p className="text-xs text-slate-500">Receive alerts for upcoming deadlines</p>
                           </div>
-                          <div className="w-12 h-6 bg-brand-600 rounded-full relative cursor-pointer">
-                            <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></div>
+                          <button 
+                            onClick={() => updateSettings({ notificationsEnabled: !state.settings.notificationsEnabled })}
+                            className={cn(
+                              "w-12 h-6 rounded-full relative transition-colors duration-300",
+                              state.settings.notificationsEnabled ? "bg-brand-600" : "bg-slate-300"
+                            )}
+                          >
+                            <motion.div 
+                              animate={{ x: state.settings.notificationsEnabled ? 24 : 4 }}
+                              className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm"
+                            />
+                          </button>
+                        </div>
+                        
+                        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl opacity-50 cursor-not-allowed">
+                          <div>
+                            <p className="font-bold text-slate-900 font-display">Dark Mode</p>
+                            <p className="text-xs text-slate-500">Coming soon in next update</p>
+                          </div>
+                          <div className="w-12 h-6 bg-slate-200 rounded-full relative">
+                            <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full"></div>
                           </div>
                         </div>
                       </div>

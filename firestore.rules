@@ -32,7 +32,8 @@ service cloud.firestore {
                data.email is string && isValidEmail(data.email) &&
                (data.displayName == null || data.displayName is string) &&
                (data.major == null || data.major is string) &&
-               (data.gpa == null || data.gpa is number);
+               (data.gpa == null || data.gpa is number) &&
+               (data.settings == null || data.settings is map);
       }
       
       allow read: if isOwner(userId);
