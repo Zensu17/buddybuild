@@ -117,16 +117,14 @@ export const Flashcards = ({ sets, onAdd, onUpdate, onDelete }: FlashcardsProps)
                   className="absolute inset-0 backface-hidden glass rounded-[3rem] border-2 border-brand-100 flex flex-col items-center justify-center p-8 text-center shadow-lg overflow-hidden bg-white"
                   style={{ backfaceVisibility: 'hidden' }}
                 >
-                  <motion.span 
-                    animate={{ y: [0, -5, 0] }}
-                    transition={{ duration: 3, repeat: Infinity }}
+                  <span 
                     className="absolute top-8 left-8 text-[10px] font-bold text-brand-600 uppercase tracking-widest bg-brand-50 px-3 py-1.5 rounded-full border border-brand-100"
                   >
                     Question
-                  </motion.span>
+                  </span>
                   <h3 className="text-2xl md:text-3xl font-display font-extrabold text-slate-800 relative z-10 leading-tight">{currentCard.front}</h3>
                   <div className="absolute bottom-6 flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] opacity-60">
-                    <RotateCw size={14} className="text-brand-500 animate-spin-slow" />
+                    <RotateCw size={14} className="text-brand-500" />
                     Tap to reveal
                   </div>
                 </div>

@@ -206,7 +206,7 @@ const AppContent = () => {
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Albert Sitorus"
+                      placeholder=""
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm font-medium transition-all"
                     />
                   </div>
@@ -219,7 +219,7 @@ const AppContent = () => {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="student@university.edu"
+                    placeholder=""
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm font-medium transition-all"
                   />
                 </div>
@@ -231,7 +231,7 @@ const AppContent = () => {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder=""
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm font-medium transition-all"
                   />
                 </div>
@@ -579,51 +579,27 @@ const AppContent = () => {
 
                     {/* Sidebar Widgets */}
                     <div className="space-y-8 order-1 lg:order-2">
-                      {/* Study Pulse (Interactive Affirmation) */}
-                      <motion.div 
-                        whileHover={{ scale: 1.02 }}
-                        className="bg-gradient-to-br from-indigo-600 via-brand-600 to-indigo-700 rounded-[2rem] p-8 text-white shadow-2xl shadow-brand-200 relative overflow-hidden group cursor-pointer"
-                      >
-                        <motion.div 
-                          animate={{ 
-                            scale: [1, 1.2, 1],
-                            rotate: [0, 90, 0],
-                            opacity: [0.1, 0.2, 0.1]
-                          }}
-                          transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                          className="absolute -right-10 -top-10"
-                        >
+                      {/* Study Pulse (Today's Focus) */}
+                      <div className="bg-gradient-to-br from-indigo-600 via-brand-600 to-indigo-700 rounded-[2rem] p-8 text-white shadow-xl shadow-brand-100/20 relative overflow-hidden group">
+                        <div className="absolute -right-10 -top-10 opacity-10">
                           <Sparkles size={200} />
-                        </motion.div>
+                        </div>
                         
                         <div className="relative z-10 text-center">
-                          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6 backdrop-blur-md group-hover:bg-white/30 transition-colors">
+                          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6 backdrop-blur-md transition-colors">
                             <Sparkles size={32} className="text-white" />
                           </div>
                           <h3 className="text-sm font-bold uppercase tracking-[0.2em] mb-4 opacity-80">Today's Focus</h3>
-                          <AnimatePresence mode="wait">
-                            <motion.p 
-                              key="affirmation"
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -10 }}
-                              className="text-xl font-display font-bold leading-tight"
-                            >
-                              "Focus on being productive instead of busy."
-                            </motion.p>
-                          </AnimatePresence>
-                          <div className="mt-8 flex justify-center gap-1">
+                          <p className="text-xl font-display font-bold leading-tight">
+                            "Focus on being productive instead of busy."
+                          </p>
+                          <div className="mt-8 flex justify-center gap-1 opacity-50">
                             {[1, 2, 3].map((i) => (
-                              <motion.div 
-                                key={i}
-                                animate={{ scale: [1, 1.5, 1], opacity: [0.4, 1, 0.4] }}
-                                transition={{ duration: 2, repeat: Infinity, delay: i * 0.4 }}
-                                className="w-1.5 h-1.5 bg-white rounded-full"
-                              />
+                              <div key={i} className="w-1.5 h-1.5 bg-white rounded-full" />
                             ))}
                           </div>
                         </div>
-                      </motion.div>
+                      </div>
 
                       {/* Pomodoro Timer */}
                       <div className="glass rounded-[2rem] p-6 text-center space-y-4 border-2 border-brand-100 relative overflow-hidden">
