@@ -21,6 +21,11 @@ service cloud.firestore {
       return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     }
 
+    // Connection Test
+    match /test/connection {
+      allow read: if true;
+    }
+
     // ===============================================================
     // Collection Rules
     // ===============================================================
@@ -29,10 +34,8 @@ service cloud.firestore {
     match /users/{userId} {
       function isValidUser(data) {
         return data.uid == userId &&
-               data.email is string && isValidEmail(data.email) &&
+               data.email is string && (data.email == "" || isValidEmail(data.email)) &&
                (data.displayName == null || data.displayName is string) &&
-               (data.major == null || data.major is string) &&
-               (data.gpa == null || data.gpa is number) &&
                (data.settings == null || data.settings is map);
       }
       

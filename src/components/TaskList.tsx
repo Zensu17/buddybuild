@@ -33,14 +33,13 @@ export const TaskList = ({ tasks, onToggle, onDelete }: TaskListProps) => {
         ) : (
           sortedTasks.map((item) => (
             <motion.div
-              layout
               key={item.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              whileHover={{ scale: 1.01 }}
+              whileHover={{ scale: 1.005 }}
               className={cn(
-                "group flex items-center gap-4 p-5 rounded-[1.5rem] border transition-all duration-300 card-hover",
+                "group flex items-center gap-4 p-5 rounded-[1.5rem] border transition-all duration-200 card-hover",
                 item.completed 
                   ? "bg-slate-50/50 border-slate-100 opacity-60" 
                   : "bg-white border-slate-100 shadow-sm"

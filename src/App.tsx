@@ -40,7 +40,7 @@ import { format } from 'date-fns';
 import { ReminderForm } from './components/ReminderForm';
 import { ScheduleForm } from './components/ScheduleForm';
 import { useAuth } from './contexts/AuthContext';
-import { loginWithGoogle, logout } from './firebase';
+import { loginWithGoogle, logout, loginWithEmail, registerWithEmail } from './firebase';
 
 const AppContent = () => {
   const { user, loading } = useAuth();
@@ -69,6 +69,14 @@ const AppContent = () => {
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Auth Local State
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'google'>('google');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+
   // Pomodoro State
   const [workDuration, setWorkDuration] = useState(25);
   const [breakDuration, setBreakDuration] = useState(5);
@@ -95,7 +103,7 @@ const AppContent = () => {
       const nextMode = timerMode === 'work' ? 'break' : 'work';
       setTimerMode(nextMode);
       setTimerTime(nextMode === 'work' ? workDuration * 60 : breakDuration * 60);
-      alert(nextMode === 'work' ? "Break's over! Time to focus." : "Great job! Take a short break.");
+      // Removed blocking alert for better performance and iframe compatibility
     }
     return () => clearInterval(interval);
   }, [isTimerRunning, timerTime, timerMode]);
@@ -115,25 +123,146 @@ const AppContent = () => {
   }
 
   if (!user) {
+    const handleAuth = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setAuthError('');
+      setIsAuthLoading(true);
+      try {
+        if (authMode === 'login') {
+          await loginWithEmail(email, password);
+        } else if (authMode === 'signup') {
+          if (!name) throw new Error("Name is required");
+          await registerWithEmail(email, password, name);
+        }
+      } catch (err: any) {
+        setAuthError(err.message || "Authentication failed");
+      } finally {
+        setIsAuthLoading(false);
+      }
+    };
+
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white p-8 rounded-[2rem] shadow-xl max-w-md w-full text-center space-y-6"
+          className="bg-white p-8 rounded-[2.5rem] shadow-xl max-w-md w-full text-center space-y-6 border border-slate-100"
         >
-          <div className="w-20 h-20 bg-brand-100 text-brand-600 rounded-3xl flex items-center justify-center mx-auto mb-4">
-            <GraduationCap size={40} />
+          <div className="w-16 h-16 bg-brand-100 text-brand-600 rounded-3xl flex items-center justify-center mx-auto">
+            <GraduationCap size={32} />
           </div>
-          <h1 className="text-3xl font-display font-bold text-slate-900">BuddyBuild</h1>
-          <p className="text-slate-500">Your ultimate university companion. Organize your tasks, schedule, and grades in one place.</p>
-          <button 
-            onClick={loginWithGoogle}
-            className="w-full py-4 bg-brand-600 text-white rounded-2xl font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-200 flex items-center justify-center gap-3"
-          >
-            <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/24px.svg" alt="Google" className="w-6 h-6" referrerPolicy="no-referrer" />
-            Sign in with Google
-          </button>
+          <div>
+            <h1 className="text-3xl font-display font-bold text-slate-900">BuddyBuild</h1>
+            <p className="text-slate-500 text-sm mt-1">Your ultimate study companion.</p>
+          </div>
+
+          <AnimatePresence mode="wait">
+            {authMode === 'google' ? (
+              <motion.div 
+                key="google"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="space-y-4"
+              >
+                <button 
+                  onClick={loginWithGoogle}
+                  className="w-full py-4 bg-brand-600 text-white rounded-2xl font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-200 flex items-center justify-center gap-3 group"
+                >
+                  <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/24px.svg" alt="Google" className="w-6 h-6 group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
+                  Sign in with Google
+                </button>
+                <div className="relative py-2">
+                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
+                  <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-slate-400 font-bold">Or</span></div>
+                </div>
+                <button 
+                  onClick={() => setAuthMode('login')}
+                  className="text-sm font-bold text-brand-600 hover:underline"
+                >
+                  Use Email & Password
+                </button>
+              </motion.div>
+            ) : (
+              <motion.form 
+                key="email"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                onSubmit={handleAuth}
+                className="space-y-4 text-left"
+              >
+                {authError && (
+                  <div className="p-3 bg-red-50 border border-red-100 text-red-600 text-xs rounded-xl font-medium animate-shake">
+                    {authError}
+                  </div>
+                )}
+                
+                {authMode === 'signup' && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Full Name</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Albert Sitorus"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm font-medium transition-all"
+                    />
+                  </div>
+                )}
+                
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Email Address</label>
+                  <input 
+                    type="email" 
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="student@university.edu"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm font-medium transition-all"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-2 tracking-widest">Password</label>
+                  <input 
+                    type="password" 
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm font-medium transition-all"
+                  />
+                </div>
+
+                <button 
+                  type="submit"
+                  disabled={isAuthLoading}
+                  className="w-full py-4 bg-brand-600 text-white rounded-2xl font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-200 disabled:opacity-50"
+                >
+                  {isAuthLoading ? "Processing..." : authMode === 'login' ? "Sign In" : "Create Account"}
+                </button>
+
+                <div className="flex items-center justify-between pt-2">
+                  <button 
+                    type="button"
+                    onClick={() => setAuthMode('google')}
+                    className="text-xs font-bold text-slate-400 hover:text-brand-600 transition-colors"
+                  >
+                    Back to Google
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+                    className="text-xs font-bold text-brand-600 hover:underline"
+                  >
+                    {authMode === 'login' ? "Need an account?" : "Already have an account?"}
+                  </button>
+                </div>
+              </motion.form>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
     );
@@ -391,11 +520,10 @@ const AppContent = () => {
                             todayClasses.map(session => (
                               <motion.div 
                                 key={session.id} 
-                                layout
-                                initial={{ opacity: 0, y: 20 }}
+                                initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                whileHover={{ scale: 1.02, y: -5 }}
-                                className="glass p-5 rounded-3xl card-hover border-l-4 relative group cursor-pointer shadow-sm hover:shadow-xl transition-all duration-300" 
+                                whileHover={{ scale: 1.01, y: -2 }}
+                                className="glass p-5 rounded-3xl card-hover border-l-4 relative group cursor-pointer shadow-sm transition-all duration-200" 
                                 style={{ borderLeftColor: session.color }}
                               >
                                 <div className="flex justify-between items-start mb-4">

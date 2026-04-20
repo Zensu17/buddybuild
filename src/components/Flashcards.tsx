@@ -95,27 +95,28 @@ export const Flashcards = ({ sets, onAdd, onUpdate, onDelete }: FlashcardsProps)
           <AnimatePresence mode="wait">
             <motion.div 
               key={currentCardIndex}
-              initial={{ opacity: 0, scale: 0.9, rotateY: isFlipped ? 180 : 0 }}
-              animate={{ opacity: 1, scale: 1, rotateY: isFlipped ? 180 : 0 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-              className="relative h-96 perspective-1000 cursor-pointer group"
+              className="relative h-80 perspective-1000 cursor-pointer group"
               onClick={() => setIsFlipped(!isFlipped)}
             >
               <motion.div
                 animate={{ rotateY: isFlipped ? 180 : 0 }}
                 transition={{ 
-                  duration: 0.5, 
+                  duration: 0.6, 
                   type: 'spring', 
                   stiffness: 260, 
-                  damping: 18 
+                  damping: 20 
                 }}
-                style={{ transformStyle: 'preserve-3d' }}
                 className="w-full h-full relative preserve-3d"
               >
                 {/* Front */}
-                <div className="absolute inset-0 backface-hidden glass rounded-[3rem] border-2 border-brand-100 flex flex-col items-center justify-center p-8 text-center shadow-2xl overflow-hidden bg-white">
-                  <div className="absolute inset-0 bg-gradient-to-br from-brand-50/50 to-transparent pointer-events-none"></div>
+                <div 
+                  className="absolute inset-0 backface-hidden glass rounded-[3rem] border-2 border-brand-100 flex flex-col items-center justify-center p-8 text-center shadow-lg overflow-hidden bg-white"
+                  style={{ backfaceVisibility: 'hidden' }}
+                >
                   <motion.span 
                     animate={{ y: [0, -5, 0] }}
                     transition={{ duration: 3, repeat: Infinity }}
@@ -123,25 +124,20 @@ export const Flashcards = ({ sets, onAdd, onUpdate, onDelete }: FlashcardsProps)
                   >
                     Question
                   </motion.span>
-                  <h3 className="text-3xl font-display font-extrabold text-slate-800 relative z-10 leading-tight">{currentCard.front}</h3>
-                  <div className="absolute bottom-8 flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-widest animate-float opacity-60">
-                    <RotateCw size={14} className="text-brand-500" />
+                  <h3 className="text-2xl md:text-3xl font-display font-extrabold text-slate-800 relative z-10 leading-tight">{currentCard.front}</h3>
+                  <div className="absolute bottom-6 flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] opacity-60">
+                    <RotateCw size={14} className="text-brand-500 animate-spin-slow" />
                     Tap to reveal
                   </div>
                 </div>
 
                 {/* Back */}
                 <div 
-                  className="absolute inset-0 backface-hidden glass rounded-[3rem] border-2 border-brand-500 bg-brand-50/10 flex flex-col items-center justify-center p-8 text-center shadow-2xl overflow-hidden"
+                  className="absolute inset-0 backface-hidden glass rounded-[3rem] border-2 border-brand-500 bg-brand-50/20 flex flex-col items-center justify-center p-8 text-center shadow-lg overflow-hidden"
                   style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden' }}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-tr from-brand-100/20 to-transparent pointer-events-none"></div>
-                  <span className="absolute top-8 left-8 text-[10px] font-bold text-slate-100 uppercase tracking-widest bg-brand-600 px-3 py-1.5 rounded-full shadow-lg shadow-brand-200">Answer</span>
-                  <p className="text-2xl font-display font-bold text-slate-800 leading-relaxed relative z-10">{currentCard.back}</p>
-                  <div className="absolute bottom-8 flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-widest opacity-60">
-                    <RotateCw size={14} />
-                    Tap to hide
-                  </div>
+                  <span className="absolute top-8 left-8 text-[10px] font-bold text-white uppercase tracking-widest bg-brand-600 px-3 py-1.5 rounded-full shadow-lg shadow-brand-200">Answer</span>
+                  <p className="text-xl md:text-2xl font-display font-bold text-slate-800 leading-relaxed relative z-10">{currentCard.back}</p>
                 </div>
               </motion.div>
             </motion.div>

@@ -21,10 +21,7 @@
 @layer base {
   body {
     @apply bg-slate-50 text-slate-900 font-sans transition-colors duration-300;
-    background-image: 
-      radial-gradient(at 0% 0%, hsla(200,100%,95%,1) 0, transparent 50%),
-      radial-gradient(at 50% 0%, hsla(220,100%,95%,1) 0, transparent 50%),
-      radial-gradient(at 100% 0%, hsla(190,100%,95%,1) 0, transparent 50%);
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -33,11 +30,11 @@
 }
 
 .glass {
-  @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)];
+  @apply bg-white/80 backdrop-blur-md border border-white/40 shadow-sm;
 }
 
 .card-hover {
-  @apply transition-all duration-500 hover:shadow-[0_20px_50px_rgba(8,112,184,0.1)] hover:-translate-y-2;
+  @apply transition-all duration-300 hover:shadow-md hover:-translate-y-1;
 }
 
 /* Markdown Styling */
@@ -118,6 +115,25 @@
 
 .animate-float {
   animation: float 3s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
 }
 
 /* Base transitions */

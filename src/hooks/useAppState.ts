@@ -126,12 +126,17 @@ export function useAppState() {
         }));
       } else {
         // Initialize user doc if it doesn't exist
-        setDoc(userRef, {
-          uid,
-          email: auth.currentUser?.email,
-          displayName: auth.currentUser?.displayName,
-          settings: INITIAL_STATE.settings
-        }, { merge: true });
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+          setDoc(userRef, {
+            uid,
+            email: currentUser.email || '',
+            displayName: currentUser.displayName || '',
+            settings: INITIAL_STATE.settings
+          }, { merge: true }).catch(err => {
+             console.error("Error creating user doc:", err);
+          });
+        }
       }
     });
 
