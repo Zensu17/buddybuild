@@ -10,6 +10,9 @@
         "displayName": { "type": "string" },
         "major": { "type": "string" },
         "gpa": { "type": "number" },
+        "role": { "type": "string" },
+        "completedTaskIds": { "type": "array", "items": { "type": "string" } },
+        "completedExamIds": { "type": "array", "items": { "type": "string" } },
         "settings": {
           "type": "object",
           "properties": {
@@ -110,6 +113,49 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "uid", "title", "course", "cards"]
+    },
+    "ChatSession": {
+      "title": "Chat Session",
+      "description": "An AI Study Buddy conversation session with messages",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "title": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastActive": { "type": "string", "format": "date-time" },
+        "tokensUsed": { "type": "integer" },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "sender": { "type": "string", "enum": ["user", "assistant"] },
+              "text": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" },
+              "promptTokens": { "type": "integer" },
+              "candidatesTokens": { "type": "integer" },
+              "totalTokens": { "type": "integer" }
+            }
+          }
+        }
+      },
+      "required": ["id", "uid", "title", "createdAt", "messages"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "Admin auditing entries for academic data modifications",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "action": { "type": "string", "enum": ["add", "edit", "delete", "toggle"] },
+        "targetName": { "type": "string" },
+        "targetType": { "type": "string", "enum": ["jadwal", "tugas", "ujian"] },
+        "adminName": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "action", "targetName", "targetType", "adminName", "timestamp"]
     }
   },
   "firestore": {
@@ -117,17 +163,17 @@
       "schema": "User",
       "description": "User profiles"
     },
-    "/users/{uid}/tasks/{taskId}": {
+    "/tasks/{taskId}": {
       "schema": "Task",
-      "description": "User tasks"
+      "description": "Global tasks"
     },
-    "/users/{uid}/exams/{examId}": {
+    "/exams/{examId}": {
       "schema": "Exam",
-      "description": "User exams"
+      "description": "Global exams"
     },
-    "/users/{uid}/schedule/{sessionId}": {
+    "/schedule/{sessionId}": {
       "schema": "ClassSession",
-      "description": "User class schedule"
+      "description": "Global class schedule"
     },
     "/users/{uid}/grades/{gradeId}": {
       "schema": "CourseGrade",
@@ -136,6 +182,14 @@
     "/users/{uid}/flashcardSets/{setId}": {
       "schema": "FlashcardSet",
       "description": "User flashcard sets"
+    },
+    "/users/{uid}/chatSessions/{sessionId}": {
+      "schema": "ChatSession",
+      "description": "User Study Buddy chat sessions"
+    },
+    "/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Global admin actions logs"
     }
   }
 }

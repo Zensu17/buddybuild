@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, Circle, Clock, AlertCircle, Trash2, GraduationCap, MapPin } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, AlertCircle, Trash2, GraduationCap, MapPin, Pencil } from 'lucide-react';
 import { Task, Exam } from '../types';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
@@ -9,9 +9,11 @@ interface TaskListProps {
   tasks: (Task | Exam)[];
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
+  onEdit?: (item: Task | Exam) => void;
+  isAdmin?: boolean;
 }
 
-export const TaskList = ({ tasks, onToggle, onDelete }: TaskListProps) => {
+export const TaskList = ({ tasks, onToggle, onDelete, onEdit, isAdmin = false }: TaskListProps) => {
   const sortedTasks = [...tasks].sort((a, b) => {
     if (a.completed !== b.completed) return a.completed ? 1 : -1;
     return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
@@ -92,12 +94,27 @@ export const TaskList = ({ tasks, onToggle, onDelete }: TaskListProps) => {
                 </div>
               </div>
 
-              <button
-                onClick={() => onDelete(item.id)}
-                className="p-2 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
-              >
-                <Trash2 size={20} />
-              </button>
+              {isAdmin && (
+                <div className="flex items-center gap-1">
+                  {onEdit && (
+                    <button
+                      onClick={() => onEdit(item)}
+                      className="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+                      title="Edit"
+                    >
+                      <Pencil size={18} />
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => onDelete(item.id)}
+                    className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+                    title="Hapus"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                </div>
+              )}
             </motion.div>
           ))
         )}

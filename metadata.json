@@ -1,5 +1,6 @@
 {
   "name": "BuddyBuild",
   "description": "Your all-in-one university companion for managing schedules, tasks, GPA, and AI-powered study assistance.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

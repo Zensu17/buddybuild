@@ -1,16 +1,18 @@
 import React from 'react';
-import { Calendar, MapPin, Clock, Trash2 } from 'lucide-react';
+import { Calendar, MapPin, Clock, Trash2, Pencil } from 'lucide-react';
 import { ClassSession } from '../types';
 import { cn } from '../lib/utils';
 
 interface TimetableProps {
   schedule: ClassSession[];
   onDelete?: (id: string) => void;
+  onEdit?: (session: ClassSession) => void;
+  isAdmin?: boolean;
 }
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-export const Timetable = ({ schedule, onDelete }: TimetableProps) => {
+export const Timetable = ({ schedule, onDelete, onEdit, isAdmin = false }: TimetableProps) => {
   const today = new Date().getDay();
 
   return (
@@ -46,13 +48,27 @@ export const Timetable = ({ schedule, onDelete }: TimetableProps) => {
                     >
                       <div className="flex justify-between items-start gap-2">
                         <h5 className="font-bold text-sm text-slate-800 truncate flex-1 leading-tight">{session.name}</h5>
-                        {onDelete && (
-                          <button 
-                            onClick={() => onDelete(session.id)}
-                            className="p-1 text-slate-200 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                        {isAdmin && (
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                            {onEdit && (
+                              <button 
+                                onClick={() => onEdit(session)}
+                                className="p-1 text-slate-400 hover:text-brand-500 rounded transition-all"
+                                title="Edit Kursus"
+                              >
+                                <Pencil size={13} />
+                              </button>
+                            )}
+                            {onDelete && (
+                              <button 
+                                onClick={() => onDelete(session.id)}
+                                className="p-1 text-slate-450 hover:text-red-500 rounded transition-all"
+                                title="Hapus"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                       <div className="mt-3 space-y-1.5">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, BookOpen, ChevronLeft, ChevronRight, RotateCw, Save, X, Layers } from 'lucide-react';
+import { Plus, Trash2, BookOpen, ChevronLeft, ChevronRight, RotateCw, Save, X, Layers, Sparkles, Loader2, Pencil } from 'lucide-react';
 import { FlashcardSet, Flashcard } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -22,6 +22,50 @@ export const Flashcards = ({ sets, onAdd, onUpdate, onDelete }: FlashcardsProps)
   const [newTitle, setNewTitle] = useState('');
   const [newCourse, setNewCourse] = useState('');
   const [newCards, setNewCards] = useState<Flashcard[]>([]);
+
+  // AI Generator state
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [aiTopic, setAiTopic] = useState('');
+  const [aiCourse, setAiCourse] = useState('');
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+
+  const handleGenerateAI = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiTopic || !aiCourse) return;
+    setIsAiLoading(true);
+    setAiError('');
+    try {
+      const response = await fetch('/buddybuild/ai/generate-flashcards', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ topic: aiTopic, course: aiCourse })
+      });
+      const resData = await response.json();
+      if (resData.success && resData.data) {
+        onAdd({
+          title: resData.data.title,
+          course: resData.data.course,
+          cards: resData.data.cards.map((c: any) => ({
+            id: crypto.randomUUID(),
+            front: c.front,
+            back: c.back
+          }))
+        });
+        setIsGeneratingAI(false);
+        setAiTopic('');
+        setAiCourse('');
+      } else {
+        setAiError(resData.error || 'Gagal menghasilkan flashcard via AI.');
+      }
+    } catch (err: any) {
+      setAiError(err.message || 'Terjadi kesalahan jaringan.');
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
 
   const handleAddCard = () => {
     setNewCards([...newCards, { id: crypto.randomUUID(), front: '', back: '' }]);
@@ -177,18 +221,118 @@ export const Flashcards = ({ sets, onAdd, onUpdate, onDelete }: FlashcardsProps)
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-display font-bold text-slate-900">Flashcards</h2>
-          <p className="text-slate-500">Master your course material with active recall.</p>
+          <p className="text-slate-500">Kuasai materi kuliah Anda dengan metode active recall & AI.</p>
         </div>
-        <button 
-          onClick={() => setIsAdding(true)}
-          className="bg-brand-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-200 flex items-center gap-2"
-        >
-          <Plus size={20} />
-          Create New Set
-        </button>
+        <div className="flex items-center gap-3 self-start md:self-auto">
+          <button 
+            type="button"
+            onClick={() => setIsGeneratingAI(true)}
+            className="bg-purple-600 text-white px-5 py-3 rounded-2xl font-bold hover:bg-purple-700 transition-all shadow-lg shadow-purple-150 flex items-center gap-2 cursor-pointer text-sm"
+          >
+            <Sparkles size={16} className="text-purple-100" />
+            Buat via AI
+          </button>
+          <button 
+            type="button"
+            onClick={() => setIsAdding(true)}
+            className="bg-brand-600 text-white px-5 py-3 rounded-2xl font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-150 flex items-center gap-2 cursor-pointer text-sm"
+          >
+            <Plus size={16} />
+            Manual Set
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>
+        {isGeneratingAI && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-white rounded-[2.5rem] w-full max-w-md shadow-2xl overflow-hidden border border-slate-100"
+            >
+              <form onSubmit={handleGenerateAI} className="flex flex-col">
+                <div className="p-8 bg-purple-600 text-white">
+                  <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center mb-4 border border-white/10">
+                    <Sparkles size={20} className="text-purple-100" />
+                  </div>
+                  <h3 className="text-xl font-bold font-display leading-tight">Buat Set Flashcard via AI</h3>
+                  <p className="text-purple-100 text-xs mt-1">Sistem AI akan otomatis merumuskan 6 kartu pertanyaan & jawaban relevan berdasarkan topik belajar yang Anda ketik.</p>
+                </div>
+
+                <div className="p-8 space-y-4">
+                  {aiError && (
+                    <div className="p-3 bg-red-50 border border-red-100 text-red-600 rounded-xl text-xs font-semibold">
+                      ⚠️ {aiError}
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Topik Belajar / Bahasan</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={aiTopic}
+                      onChange={(e) => setAiTopic(e.target.value)}
+                      placeholder="Contoh: Reaksi Kimia Organik, Teori Komunikasi Massa, Hukum Agraria"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 outline-none transition-all placeholder:text-slate-300 text-slate-800"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Nama / Kode Mata Kuliah</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={aiCourse}
+                      onChange={(e) => setAiCourse(e.target.value)}
+                      placeholder="Contoh: BIO101, Pengantar Sosiologi, Kimia Dasar"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 outline-none transition-all placeholder:text-slate-300 text-slate-800"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-8 bg-slate-50 border-t border-slate-100 flex gap-3">
+                  <button 
+                    type="button"
+                    disabled={isAiLoading}
+                    onClick={() => {
+                      setIsGeneratingAI(false);
+                      setAiError('');
+                    }}
+                    className="flex-1 py-3 bg-white text-slate-600 rounded-xl font-bold border border-slate-200 hover:bg-slate-100 transition-all text-xs cursor-pointer disabled:opacity-50"
+                  >
+                    Batal
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={isAiLoading || !aiTopic || !aiCourse}
+                    className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all shadow-md shadow-purple-150 disabled:opacity-50 flex items-center justify-center gap-1.5 text-xs cursor-pointer"
+                  >
+                    {isAiLoading ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        Merumuskan...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={14} />
+                        Buat Set AI
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+
         {isAdding && (
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
@@ -213,6 +357,7 @@ export const Flashcards = ({ sets, onAdd, onUpdate, onDelete }: FlashcardsProps)
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Set Title</label>
                     <input 
                       type="text" 
+                      autoFocus
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
                       placeholder="e.g. Biology Midterm"
@@ -315,8 +460,9 @@ export const Flashcards = ({ sets, onAdd, onUpdate, onDelete }: FlashcardsProps)
                   <button 
                     onClick={() => editSet(set)}
                     className="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-all"
+                    title="Edit Set"
                   >
-                    <RotateCw size={16} />
+                    <Pencil size={16} />
                   </button>
                   <button 
                     onClick={() => onDelete(set.id)}

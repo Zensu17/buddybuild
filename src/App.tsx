@@ -26,21 +26,46 @@ import {
   Quote,
   StickyNote,
   Sparkles,
-  Layers
+  Layers,
+  Trophy,
+  Pencil,
+  ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppState } from './hooks/useAppState';
+import { ClassSession, Task, Exam } from './types';
 import { TaskList } from './components/TaskList';
 import { Timetable } from './components/Timetable';
 import { GPACalculator } from './components/GPACalculator';
-import { StudyBuddy } from './components/StudyBuddy';
 import { Flashcards } from './components/Flashcards';
+import { StudyBuddy } from './components/StudyBuddy';
+import { UrgentCountdown } from './components/UrgentCountdown';
+import { ZenSoundPlayer } from './components/ZenSoundPlayer';
+import { DashboardStats } from './components/DashboardStats';
+import { QuotesBanner } from './components/QuotesBanner';
+import { AnnouncementBoard } from './components/AnnouncementBoard';
 import { cn } from './lib/utils';
 import { format } from 'date-fns';
 import { ReminderForm } from './components/ReminderForm';
 import { ScheduleForm } from './components/ScheduleForm';
+import { AdminDashboard } from './components/AdminDashboard';
 import { useAuth } from './contexts/AuthContext';
+import canvasConfetti from 'canvas-confetti';
 import { loginWithGoogle, logout, loginWithEmail, registerWithEmail } from './firebase';
+
+const STUDY_QUOTES = [
+  { text: "Hasil tertinggi dari pendidikan adalah toleransi dan pemahaman mendalam.", author: "Helen Keller" },
+  { text: "Jika Anda tidak bisa menjelaskannya dengan sederhana, Anda belum memahaminya dengan cukup baik.", author: "Richard Feynman" },
+  { text: "Keberhasilan adalah hasil dari persiapan, kerja keras, dan belajar dari kegagalan.", author: "Colin Powell" },
+  { text: "Investasi dalam pengetahuan selalu memberikan bunga terbaik.", author: "Benjamin Franklin" },
+  { text: "Bukan karena hal itu sulit kita tidak berani, namun karena kita tidak berani maka hal itu menjadi sulit.", author: "Seneca" }
+];
+
+const ADMIN_EMAILS = [
+  'sitorusalbert27@gmail.com',
+  'admin@buddybuild.com',
+  'admin@buddybuild.ac.id'
+];
 
 const AppContent = () => {
   const { user, loading } = useAuth();
@@ -49,24 +74,36 @@ const AppContent = () => {
     toggleTask, 
     deleteTask, 
     addTask, 
+    updateTask,
     addGrade, 
+    updateGrade,
     deleteGrade, 
     addExam, 
+    updateExam,
     toggleExam, 
     deleteExam, 
     clearNotification,
     addClass,
+    updateClass,
     deleteClass,
     addFlashcardSet,
     updateFlashcardSet,
     deleteFlashcardSet,
     updateSettings,
-    isAuthReady
+    plantSeed,
+    waterPlant,
+    harvestActivePlant,
+    addDroplets,
+    isAuthReady,
+    addAuditLog
   } = useAppState();
 
   const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [isAdmin, setIsAdmin] = useState(false);
   const [showReminderForm, setShowReminderForm] = useState(false);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [editingReminder, setEditingReminder] = useState<any>(null);
+  const [editingSession, setEditingSession] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   
   // Auth Local State
@@ -85,6 +122,392 @@ const AppContent = () => {
   const [timerMode, setTimerMode] = useState<'work' | 'break'>('work');
   const [showTimerSettings, setShowTimerSettings] = useState(false);
   
+  // Toast Notification State
+  interface ToastConfig {
+    id: string;
+    message: string;
+    onUndo?: () => void;
+    type: 'success' | 'info' | 'error' | 'delete';
+  }
+  const [toasts, setToasts] = useState<ToastConfig[]>([]);
+
+  const showToast = (message: string, onUndo?: () => void, type: 'success' | 'info' | 'error' | 'delete' = 'info') => {
+    const id = crypto.randomUUID();
+    setToasts(prev => [...prev, { id, message, onUndo, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 6000);
+  };
+
+  const handleDeleteClass = async (id: string) => {
+    const session = state.schedule?.find(s => s.id === id);
+    if (!session) return;
+    try {
+      await deleteClass(id);
+      showToast(
+        `Jadwal kuliah "${session.name}" dihapus.`,
+        async () => {
+          await addClass({
+            name: session.name,
+            room: session.room,
+            day: session.day,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            color: session.color
+          });
+        },
+        'delete'
+      );
+    } catch (error) {
+      console.error("Error deleting class:", error);
+    }
+  };
+
+  const handleDeleteTask = async (id: string) => {
+    const task = state.tasks?.find(t => t.id === id);
+    if (!task) return;
+    try {
+      await deleteTask(id);
+      showToast(
+        `Tugas "${task.title}" dihapus.`,
+        async () => {
+          await addTask({
+            title: task.title,
+            course: task.course,
+            dueDate: task.dueDate,
+            reminderTime: task.reminderTime,
+            priority: task.priority
+          });
+        },
+        'delete'
+      );
+    } catch (error) {
+      console.error("Error deleting task:", error);
+    }
+  };
+
+  const handleDeleteExam = async (id: string) => {
+    const exam = state.exams?.find(e => e.id === id);
+    if (!exam) return;
+    try {
+      await deleteExam(id);
+      showToast(
+        `Ujian "${exam.title}" dihapus.`,
+        async () => {
+          await addExam({
+            title: exam.title,
+            course: exam.course,
+            dueDate: exam.dueDate,
+            reminderTime: exam.reminderTime,
+            priority: exam.priority,
+            location: exam.location || ""
+          });
+        },
+        'delete'
+      );
+    } catch (error) {
+      console.error("Error deleting exam:", error);
+    }
+  };
+
+  const handleDeleteReminder = async (id: string, type: 'task' | 'exam') => {
+    if (type === 'task') {
+      await handleDeleteTask(id);
+    } else {
+      await handleDeleteExam(id);
+    }
+  };
+
+  const handleAddClass = async (session: Omit<ClassSession, 'id' | 'uid'>) => {
+    try {
+      await addClass(session);
+      if (isAdmin) {
+        const adminName = user?.displayName || user?.email?.split('@')[0] || 'Admin Utama';
+        await addAuditLog({
+          action: 'add',
+          targetName: session.name,
+          targetType: 'jadwal',
+          adminName
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleUpdateClass = async (id: string, updates: Partial<ClassSession>) => {
+    try {
+      await updateClass(id, updates);
+      if (isAdmin) {
+        const adminName = user?.displayName || user?.email?.split('@')[0] || 'Admin Utama';
+        await addAuditLog({
+          action: 'edit',
+          targetName: updates.name || state.schedule?.find(s => s.id === id)?.name || 'Jadwal',
+          targetType: 'jadwal',
+          adminName
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleAddTask = async (task: Omit<Task, 'id' | 'completed' | 'type' | 'uid'>) => {
+    try {
+      await addTask(task);
+      if (isAdmin) {
+        const adminName = user?.displayName || user?.email?.split('@')[0] || 'Admin Utama';
+        await addAuditLog({
+          action: 'add',
+          targetName: task.title,
+          targetType: 'tugas',
+          adminName
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleUpdateTask = async (id: string, updates: Partial<Task>) => {
+    try {
+      await updateTask(id, updates);
+      if (isAdmin) {
+        const adminName = user?.displayName || user?.email?.split('@')[0] || 'Admin Utama';
+        await addAuditLog({
+          action: 'edit',
+          targetName: updates.title || state.tasks?.find(t => t.id === id)?.title || 'Tugas',
+          targetType: 'tugas',
+          adminName
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleAddExam = async (exam: Omit<Exam, 'id' | 'completed' | 'type' | 'uid'>) => {
+    try {
+      await addExam(exam);
+      if (isAdmin) {
+        const adminName = user?.displayName || user?.email?.split('@')[0] || 'Admin Utama';
+        await addAuditLog({
+          action: 'add',
+          targetName: exam.title,
+          targetType: 'ujian',
+          adminName
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleUpdateExam = async (id: string, updates: Partial<Exam>) => {
+    try {
+      await updateExam(id, updates);
+      if (isAdmin) {
+        const adminName = user?.displayName || user?.email?.split('@')[0] || 'Admin Utama';
+        await addAuditLog({
+          action: 'edit',
+          targetName: updates.title || state.exams?.find(e => e.id === id)?.title || 'Ujian',
+          targetType: 'ujian',
+          adminName
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleBulkAddPack = async (packType: 'akademik' | 'remedial') => {
+    try {
+      const adminName = user?.displayName || user?.email?.split('@')[0] || 'Admin Utama';
+      if (packType === 'akademik') {
+        const dummyClasses = [
+          { name: 'Kalkulus Multi-Variabel', day: 1, startTime: '08:30', endTime: '10:30', room: 'Ruang A-301', color: '#3b82f6' },
+          { name: 'Pemrograman Web Kontemporer', day: 2, startTime: '10:00', endTime: '12:00', room: 'Lab Komputer B', color: '#10b981' },
+          { name: 'Kecerdasan Artifisial Pratis', day: 3, startTime: '13:30', endTime: '15:30', room: 'Lab Riset AI', color: '#8b5cf6' },
+          { name: 'Etika Profesi IPTEK', day: 4, startTime: '09:00', endTime: '11:00', room: 'Aula Gedung C', color: '#f59e0b' }
+        ];
+        for (const cls of dummyClasses) {
+          await addClass(cls);
+        }
+        await addAuditLog({
+          action: 'add',
+          targetName: 'Paket Jadwal Akademik Contoh',
+          targetType: 'jadwal',
+          adminName
+        });
+      } else {
+        const dummyReminders: { title: string; course: string; dueDate: string; priority: 'low' | 'medium' | 'high'; reminderTime: number }[] = [
+          { title: 'Tugas Mandiri Ke-4: Struktur Data', course: 'Struktur Data', dueDate: new Date(Date.now() + 3600000 * 48).toISOString(), priority: 'high', reminderTime: 30 },
+          { title: 'Persiapan Kuis UTS: Fisika Dasar', course: 'Fisika Dasar', dueDate: new Date(Date.now() + 3600000 * 72).toISOString(), priority: 'medium', reminderTime: 60 }
+        ];
+        for (const task of dummyReminders) {
+          await addTask(task);
+        }
+        await addAuditLog({
+          action: 'add',
+          targetName: 'Paket Penugasan Remedial Contoh',
+          targetType: 'tugas',
+          adminName
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleClearCompletedTasks = async () => {
+    try {
+      const completed = state.tasks?.filter(t => t.completed) || [];
+      for (const t of completed) {
+        await deleteTask(t.id);
+      }
+      const adminName = user?.displayName || user?.email?.split('@')[0] || 'Admin Utama';
+      await addAuditLog({
+        action: 'delete',
+        targetName: `Pembersihan ${completed.length} Tugas Selesai`,
+        targetType: 'tugas',
+        adminName
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+  
+  // State untuk Kutipan & Habits
+  const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0);
+  const [habits, setHabits] = useState(() => {
+    const cached = localStorage.getItem('buddybuild_habits');
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (e) {}
+    }
+    return [
+      { id: '1', title: 'Sesi Fokus Pomodoro', completed: false },
+      { id: '2', title: 'Tinjau Rencana Jadwal Kuliah', completed: false },
+      { id: '3', title: 'Latihan Kuis / Kerjakan Flashcard', completed: false },
+      { id: '4', title: 'Konsumsi Air Putih & Istirahat', completed: false }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('buddybuild_habits', JSON.stringify(habits));
+  }, [habits]);
+
+  useEffect(() => {
+    if (state.role === 'admin') {
+      setIsAdmin(localStorage.getItem('buddybuild_custom_admin') !== 'false');
+    } else {
+      setIsAdmin(false);
+    }
+  }, [state.role]);
+
+  // Browser Push & Local Alarm system for Class sessions 15-min before
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+  }, []);
+
+  const classNotifiedSet = useRef<string[]>([]);
+
+  useEffect(() => {
+    const checkScheduleAlarm = () => {
+      const now = new Date();
+      const currentDay = now.getDay(); // 0-6
+      
+      state.schedule?.forEach(session => {
+        if (session.day !== currentDay) return;
+        
+        const [hours, minutes] = session.startTime.split(':').map(Number);
+        const classDate = new Date();
+        classDate.setHours(hours, minutes, 0, 0);
+        
+        const diffMs = classDate.getTime() - now.getTime();
+        const diffMins = Math.round(diffMs / (60 * 1000));
+        
+        if (diffMins === 15) {
+          const key = `${session.id}-${classDate.toDateString()}`;
+          if (classNotifiedSet.current.includes(key)) return;
+          classNotifiedSet.current.push(key);
+          
+          const alertMessage = `🌸 Peringatan Manis: Sesi kuliah "${session.name}" di "${session.room}" akan dimulai dalam 15 menit (${session.startTime}). Bersiap-siap ya!`;
+          
+          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            try {
+              new Notification("BuddyBuild Kampus 🏫", {
+                body: alertMessage,
+                icon: "/favicon.ico",
+              });
+            } catch (error) {
+              console.error("Browser notification failed", error);
+            }
+          }
+          
+          showToast(alertMessage, undefined, 'info');
+          
+          try {
+            const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.type = 'sine';
+            const nowTime = audioCtx.currentTime;
+            
+            osc.frequency.setValueAtTime(523.25, nowTime); // C5
+            osc.frequency.setValueAtTime(659.25, nowTime + 0.15); // E5
+            osc.frequency.setValueAtTime(783.99, nowTime + 0.3); // G5
+            
+            gain.gain.setValueAtTime(0.15, nowTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, nowTime + 0.8);
+            
+            osc.start(nowTime);
+            osc.stop(nowTime + 0.8);
+          } catch (e) {
+            console.warn("Audio chime could not play due to user gesture requirement.", e);
+          }
+        }
+      });
+    };
+
+    checkScheduleAlarm();
+    const intervalId = setInterval(checkScheduleAlarm, 30000);
+    return () => clearInterval(intervalId);
+  }, [state.schedule]);
+
+  const toggleHabit = (id: string) => {
+    setHabits(prev => prev.map(h => {
+      if (h.id === id) {
+        const nextState = !h.completed;
+        if (nextState) {
+          canvasConfetti({
+            particleCount: 80,
+            spread: 50,
+            origin: { y: 0.8 }
+          });
+        }
+        return { ...h, completed: nextState };
+      }
+      return h;
+    }));
+  };
+
+  const getGreeting = () => {
+    const hours = new Date().getHours();
+    if (hours < 11) return 'Selamat pagi 🌤️';
+    if (hours < 15) return 'Selamat siang ☀️';
+    if (hours < 19) return 'Selamat sore 🌅';
+    return 'Selamat malam 🌙';
+  };
+
   // Notes State
   const [notes, setNotes] = useState<string>(() => localStorage.getItem('buddybuild_notes') || '');
 
@@ -101,6 +524,10 @@ const AppContent = () => {
     } else if (timerTime === 0) {
       setIsTimerRunning(false);
       const nextMode = timerMode === 'work' ? 'break' : 'work';
+      if (timerMode === 'work') {
+        addDroplets(20);
+        canvasConfetti({ particleCount: 100, spread: 70 });
+      }
       setTimerMode(nextMode);
       setTimerTime(nextMode === 'work' ? workDuration * 60 : breakDuration * 60);
       // Removed blocking alert for better performance and iframe compatibility
@@ -135,7 +562,24 @@ const AppContent = () => {
           await registerWithEmail(email, password, name);
         }
       } catch (err: any) {
-        setAuthError(err.message || "Authentication failed");
+        console.error("Auth Error details:", err);
+        const errorCode = err.code || "";
+        
+        if (errorCode === 'auth/operation-not-allowed') {
+          setAuthError(
+            "⚠️ Metode Masuk Email & Sandi belum diaktifkan di Firebase Console Anda! Silakan masuk ke Firebase Console -> Authentication -> tab Sign-in Method -> aktifkan opsi 'Email/Password' agar fitur ini berfungsi dengan benar."
+          );
+        } else if (errorCode === 'auth/email-already-in-use') {
+          setAuthError("Email ini sudah digunakan oleh akun lain. Silakan masuk menggunakan akun tersebut.");
+        } else if (errorCode === 'auth/weak-password') {
+          setAuthError("Kata sandi terlalu pendek. Masukkan minimal 6 karakter.");
+        } else if (errorCode === 'auth/invalid-email') {
+          setAuthError("Format alamat email tidak valid.");
+        } else if (errorCode === 'auth/invalid-credential' || errorCode === 'auth/wrong-password' || errorCode === 'auth/user-not-found') {
+          setAuthError("Email atau Kata Sandi yang dimasukkan salah.");
+        } else {
+          setAuthError(err.message || "Gagal melakukan autentikasi");
+        }
       } finally {
         setIsAuthLoading(false);
       }
@@ -269,12 +713,14 @@ const AppContent = () => {
   }
 
   const navItems = [
+    ...(isAdmin ? [{ id: 'admin-dashboard', label: '🛡️ Admin Center', icon: ShieldAlert }] : []),
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'stats', label: 'Statistik Belajar', icon: TrendingUp },
     { id: 'schedule', label: 'Schedule', icon: Calendar },
     { id: 'tasks', label: 'Reminders', icon: CheckSquare },
     { id: 'flashcards', label: 'Flashcards', icon: Layers },
     { id: 'gpa', label: 'GPA Tracker', icon: GraduationCap },
-    { id: 'ai', label: 'Study Buddy', icon: MessageSquare },
+    { id: 'studybuddy', label: 'Study Buddy', icon: MessageSquare },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -333,16 +779,27 @@ const AppContent = () => {
 
       {showReminderForm && (
         <ReminderForm 
-          onAddTask={addTask} 
-          onAddExam={addExam} 
-          onClose={() => setShowReminderForm(false)} 
+          onAddTask={handleAddTask} 
+          onAddExam={handleAddExam} 
+          onUpdateTask={handleUpdateTask}
+          onUpdateExam={handleUpdateExam}
+          editingItem={editingReminder}
+          onClose={() => {
+            setShowReminderForm(false);
+            setEditingReminder(null);
+          }} 
         />
       )}
 
       {showScheduleForm && (
         <ScheduleForm 
-          onAdd={addClass} 
-          onClose={() => setShowScheduleForm(false)} 
+          onAdd={handleAddClass} 
+          onUpdate={handleUpdateClass}
+          editingSession={editingSession}
+          onClose={() => {
+            setShowScheduleForm(false);
+            setEditingSession(null);
+          }} 
         />
       )}
 
@@ -441,6 +898,42 @@ const AppContent = () => {
             </div>
 
             <div className="flex items-center gap-4">
+              {/* Mode Admin Switch */}
+              {state.role === 'admin' && (
+                <button
+                  onClick={() => {
+                    if (isAdmin) {
+                      setIsAdmin(false);
+                      localStorage.setItem('buddybuild_custom_admin', 'false');
+                      setActiveTab('dashboard');
+                      canvasConfetti({
+                        particleCount: 15,
+                        spread: 30,
+                        origin: { y: 0.1, x: 0.8 }
+                      });
+                    } else {
+                      setIsAdmin(true);
+                      localStorage.setItem('buddybuild_custom_admin', 'true');
+                      setActiveTab('admin-dashboard');
+                      canvasConfetti({
+                        particleCount: 30,
+                        spread: 40,
+                        origin: { y: 0.1, x: 0.8 }
+                      });
+                    }
+                  }}
+                  className={cn(
+                    "px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1 border cursor-pointer",
+                    isAdmin 
+                      ? "bg-slate-900 border-slate-950 text-amber-400 hover:bg-slate-900" 
+                      : "bg-slate-105 border-slate-200 text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                  )}
+                  title="Klik untuk berpindah ke Fitur Admin / Siswa"
+                >
+                  <span>{isAdmin ? '🛡️ Mode Admin ON' : '🎓 Mode Siswa'}</span>
+                </button>
+              )}
+
               <button 
                 onClick={() => setActiveTab('tasks')}
                 className={cn(
@@ -479,28 +972,131 @@ const AppContent = () => {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
             >
+              {activeTab === 'admin-dashboard' && isAdmin && (
+                <AdminDashboard 
+                  schedule={state.schedule || []}
+                  tasks={state.tasks || []}
+                  exams={state.exams || []}
+                  grades={state.grades || []}
+                  flashcardSets={state.flashcardSets || []}
+                  auditLogs={state.auditLogs || []}
+                  onAddAuditLog={addAuditLog}
+                  currentAdminName={user?.displayName || user?.email?.split('@')[0] || 'Admin Utama'}
+                  onAddSchedule={() => {
+                    setEditingSession(null);
+                    setShowScheduleForm(true);
+                  }}
+                  onEditSchedule={(session) => {
+                    setEditingSession(session);
+                    setShowScheduleForm(true);
+                  }}
+                  onDeleteSchedule={(id) => handleDeleteClass(id)}
+                  onAddReminder={() => {
+                    setEditingReminder(null);
+                    setShowReminderForm(true);
+                  }}
+                  onEditReminder={(item) => {
+                    setEditingReminder(item);
+                    setShowReminderForm(true);
+                  }}
+                  onDeleteReminder={(id, type) => {
+                    handleDeleteReminder(id, type);
+                  }}
+                  onToggleReminder={async (id, type) => {
+                    if (type === 'task') {
+                      await toggleTask(id);
+                      if (isAdmin) {
+                        const taskItem = state.tasks?.find(t => t.id === id);
+                        const adminName = user?.displayName || user?.email?.split('@')[0] || 'Admin Utama';
+                        await addAuditLog({
+                          action: 'toggle',
+                          targetName: taskItem?.title || 'Tugas',
+                          targetType: 'tugas',
+                          adminName
+                        });
+                      }
+                    } else {
+                      await toggleExam(id);
+                      if (isAdmin) {
+                        const examItem = state.exams?.find(e => e.id === id);
+                        const adminName = user?.displayName || user?.email?.split('@')[0] || 'Admin Utama';
+                        await addAuditLog({
+                          action: 'toggle',
+                          targetName: examItem?.title || 'Ujian',
+                          targetType: 'ujian',
+                          adminName
+                        });
+                      }
+                    }
+                  }}
+                  onBulkAddPack={handleBulkAddPack}
+                  onClearCompletedTasks={handleClearCompletedTasks}
+                />
+              )}
+
               {activeTab === 'dashboard' && (
                 <div className="space-y-8">
+                  {/* Quotes Inspirasi Belajar */}
+                  <QuotesBanner />
+
+                  {/* Countdown Tenggat Terdekat */}
+                  <UrgentCountdown 
+                    tasks={state.tasks || []} 
+                    exams={state.exams || []} 
+                    onToggleComplete={(id, type) => {
+                      if (type === 'task') toggleTask(id);
+                      else toggleExam(id);
+                    }}
+                    onEdit={isAdmin ? (id, type) => {
+                      const item = allReminders.find(r => r.id === id);
+                      if (item) {
+                        setEditingReminder(item);
+                        setShowReminderForm(true);
+                      }
+                    } : undefined}
+                  />
+
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                      <h2 className="text-2xl md:text-3xl font-display font-bold text-slate-900">Welcome back, {user.displayName?.split(' ')[0] || 'Student'}!</h2>
-                      <p className="text-sm md:text-base text-slate-500">Here's what's happening on campus today.</p>
+                      <h2 className="text-2xl md:text-3xl font-display font-extrabold text-slate-900 leading-tight">
+                        {getGreeting()}, {user.displayName?.split(' ')[0] || 'Teman Belajar'}!
+                      </h2>
+                      <p className="text-sm text-slate-500 mt-1">Sesi produktif siap dimulai. Mari kita raih hari kuliah terbaik hari ini!</p>
                     </div>
                     <div className="flex gap-3">
-                      <button 
-                        onClick={() => setShowScheduleForm(true)}
-                        className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
-                      >
-                        <Calendar size={18} />
-                        Add Class
-                      </button>
-                      <button 
-                        onClick={() => setShowReminderForm(true)}
-                        className="bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-700 transition-all shadow-lg shadow-brand-200 flex items-center gap-2"
-                      >
-                        <Plus size={18} />
-                        New Reminder
-                      </button>
+                      {isAdmin ? (
+                        <>
+                          <button 
+                            onClick={() => setShowScheduleForm(true)}
+                            className="bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+                          >
+                            <Calendar size={16} />
+                            Tambah Jadwal Kuliah
+                          </button>
+                          <button 
+                            onClick={() => setShowReminderForm(true)}
+                            className="bg-slate-950 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-800 transition-all shadow-md flex items-center gap-2 cursor-pointer bg-slate-900"
+                          >
+                            <Plus size={16} />
+                            Tugas Baru
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button 
+                            onClick={() => setActiveTab('studybuddy')}
+                            className="bg-purple-50 text-purple-700 border border-purple-200 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-purple-100 transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+                          >
+                            🤖 Tanya Study Buddy AI
+                          </button>
+                          <button 
+                            onClick={() => setActiveTab('flashcards')}
+                            className="bg-brand-50 text-brand-700 border border-brand-200 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-brand-100 transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+                          >
+                            🧠 Latihan Flashcards
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -530,12 +1126,27 @@ const AppContent = () => {
                                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{session.startTime} - {session.endTime}</span>
                                   <div className="flex items-center gap-2">
                                     <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-1 rounded-full font-bold uppercase">{session.room}</span>
-                                    <button 
-                                      onClick={() => deleteClass(session.id)}
-                                      className="p-1 text-slate-300 hover:text-red-500 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity"
-                                    >
-                                      <Trash2 size={14} />
-                                    </button>
+                                    {isAdmin && (
+                                      <>
+                                        <button 
+                                          onClick={() => {
+                                            setEditingSession(session);
+                                            setShowScheduleForm(true);
+                                          }}
+                                          className="p-1 text-slate-350 hover:text-brand-500 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity cursor-pointer"
+                                          title="Edit Kelas"
+                                        >
+                                          <Pencil size={14} />
+                                        </button>
+                                        <button 
+                                          onClick={() => handleDeleteClass(session.id)}
+                                          className="p-1 text-slate-305 hover:text-red-500 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity cursor-pointer"
+                                          title="Hapus Kelas"
+                                        >
+                                          <Trash2 size={14} />
+                                        </button>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
                                 <h4 className="text-lg font-bold text-slate-800 mb-1">{session.name}</h4>
@@ -570,37 +1181,47 @@ const AppContent = () => {
                           }} 
                           onDelete={(id) => {
                             const item = allReminders.find(r => r.id === id);
-                            if (item?.type === 'task') deleteTask(id);
-                            else deleteExam(id);
+                            if (item?.type === 'task') {
+                              handleDeleteTask(id);
+                            } else {
+                              handleDeleteExam(id);
+                            }
                           }} 
+                          onEdit={(item) => {
+                            setEditingReminder(item);
+                            setShowReminderForm(true);
+                          }}
                         />
                       </div>
+
+                      {/* Papan Pengumuman Digital Kelas */}
+                      <AnnouncementBoard 
+                        isAdmin={isAdmin}
+                        adminName={user?.displayName || user?.email?.split('@')[0] || 'Admin Utama'}
+                        onAddAdminTask={(task) => {
+                          handleAddTask({
+                            title: task.title,
+                            course: task.course,
+                            dueDate: task.dueDate,
+                            reminderTime: 60,
+                            priority: task.priority
+                          });
+                        }}
+                        onAddAdminSchedule={(session) => {
+                          handleAddClass({
+                            name: session.name,
+                            room: 'Ruang A-101 (Admin)',
+                            day: session.day,
+                            startTime: session.startTime,
+                            endTime: session.endTime,
+                            color: '#e11d48' // rose notification color
+                          });
+                        }}
+                      />
                     </div>
 
                     {/* Sidebar Widgets */}
                     <div className="space-y-8 order-1 lg:order-2">
-                      {/* Study Pulse (Today's Focus) */}
-                      <div className="bg-gradient-to-br from-indigo-600 via-brand-600 to-indigo-700 rounded-[2rem] p-8 text-white shadow-xl shadow-brand-100/20 relative overflow-hidden group">
-                        <div className="absolute -right-10 -top-10 opacity-10">
-                          <Sparkles size={200} />
-                        </div>
-                        
-                        <div className="relative z-10 text-center">
-                          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6 backdrop-blur-md transition-colors">
-                            <Sparkles size={32} className="text-white" />
-                          </div>
-                          <h3 className="text-sm font-bold uppercase tracking-[0.2em] mb-4 opacity-80">Today's Focus</h3>
-                          <p className="text-xl font-display font-bold leading-tight">
-                            "Focus on being productive instead of busy."
-                          </p>
-                          <div className="mt-8 flex justify-center gap-1 opacity-50">
-                            {[1, 2, 3].map((i) => (
-                              <div key={i} className="w-1.5 h-1.5 bg-white rounded-full" />
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
                       {/* Pomodoro Timer */}
                       <div className="glass rounded-[2rem] p-6 text-center space-y-4 border-2 border-brand-100 relative overflow-hidden">
                         <div className="flex items-center justify-between mb-2">
@@ -690,47 +1311,50 @@ const AppContent = () => {
                         </AnimatePresence>
                       </div>
 
-                      {/* Study Impulse (Interactive Mindful Widget) */}
-                      <motion.div 
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        whileHover={{ y: -5 }}
-                        className="bg-white rounded-[2rem] p-8 border border-brand-100 shadow-xl shadow-brand-50 relative overflow-hidden group cursor-pointer"
-                      >
-                        <motion.div 
-                          animate={{ 
-                            scale: [1, 1.1, 1],
-                            opacity: [0.3, 0.5, 0.3],
-                          }}
-                          transition={{ duration: 4, repeat: Infinity }}
-                          className="absolute -right-6 -top-6 w-32 h-32 bg-brand-100 rounded-full blur-3xl"
-                        />
-                        <div className="relative z-10 text-center space-y-4">
-                          <motion.div 
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                            className="w-12 h-12 bg-brand-50 text-brand-600 rounded-2xl flex items-center justify-center mx-auto"
-                          >
-                            <Sparkles size={24} />
-                          </motion.div>
-                          <div>
-                            <h4 className="text-[10px] font-bold text-brand-600 uppercase tracking-[0.2em] mb-2">Internal Vitals</h4>
-                            <p className="text-sm font-medium text-slate-700 italic px-2 leading-relaxed">
-                              "You don't have to be great to start, but you have to start to be great."
-                            </p>
-                          </div>
-                          <div className="pt-2 flex justify-center gap-1">
-                            {[1, 2, 3, 4].map(i => (
-                              <motion.div 
-                                key={i}
-                                animate={{ height: [4, 12, 4] }}
-                                transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
-                                className="w-1 bg-brand-400 rounded-full"
-                              />
-                            ))}
-                          </div>
+                      {/* Lofi & Ambient Sound Player */}
+                      <ZenSoundPlayer />
+
+                      {/* Daily Study Habits Checklist */}
+                      <div className="bg-white rounded-[2rem] p-6 border border-slate-150 shadow-sm space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold text-sm flex items-center gap-2 text-slate-800">
+                            <CheckSquare size={18} className="text-brand-500" />
+                            Kebiasaan Belajar Harian
+                          </h4>
+                          <span className="text-[10px] font-bold bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full">
+                            {habits.filter(h => h.completed).length} / {habits.length}
+                          </span>
                         </div>
-                      </motion.div>
+
+                        <p className="text-[11px] text-slate-400 leading-relaxed">
+                          Selesaikan kebiasaan mikro di bawah ini secara disiplin setiap hari untuk menjaga produktivitas:
+                        </p>
+
+                        <div className="space-y-2.5">
+                          {habits.map((habit) => (
+                            <button
+                              key={habit.id}
+                              onClick={() => toggleHabit(habit.id)}
+                              className={cn(
+                                "w-full flex items-center gap-3 p-3.5 rounded-xl border text-left cursor-pointer transition-all",
+                                habit.completed
+                                  ? "bg-slate-50 border-slate-100 opacity-60 text-slate-400 line-through font-medium"
+                                  : "bg-white border-slate-100 hover:border-slate-200 text-slate-700 shadow-sm font-semibold"
+                              )}
+                            >
+                              <div className={cn(
+                                "w-5 h-5 rounded-md flex items-center justify-center border transition-all shrink-0",
+                                habit.completed
+                                  ? "bg-brand-500 border-brand-500 text-white"
+                                  : "border-slate-200 bg-slate-50 text-transparent"
+                              )}>
+                                <CheckCircle2 size={12} className="stroke-white" />
+                              </div>
+                              <span className="text-xs tracking-tight">{habit.title}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
                       {/* Quick Notes */}
                       <div className="glass rounded-[2rem] p-6 flex flex-col min-h-[250px]">
@@ -778,39 +1402,96 @@ const AppContent = () => {
                 </div>
               )}
 
+              {activeTab === 'stats' && (
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-3xl font-display font-[800] text-slate-900 tracking-tight">Statistik Belajar Anda</h2>
+                    <p className="text-slate-500 text-sm mt-1">Pantau grafik tren IPK (Sem-ke-Sem), pembagian waktu fokus, dan kepatuhan penyelesaian tugas akademis Anda.</p>
+                  </div>
+                  
+                  <DashboardStats 
+                    grades={state.grades || []} 
+                    tasks={state.tasks || []} 
+                    exams={state.exams || []} 
+                  />
+                </div>
+              )}
+
               {activeTab === 'schedule' && (
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <h2 className="text-3xl font-display font-bold text-slate-900">Weekly Schedule</h2>
-                      <p className="text-slate-500">Manage your classes and lecture halls.</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-3xl font-display font-bold text-slate-900">Jadwal Kuliah Mingguan</h2>
+                        {isAdmin ? (
+                          <span className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            🛡️ Pengelola (Admin)
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold bg-slate-50 text-slate-500 border border-slate-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            🔒 Siswa (Baca Saja)
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-slate-500 text-sm mt-1">Daftar jam masuk kuliah dan informasi ruang kelas Anda yang resmi.</p>
                     </div>
-                    <button 
-                      onClick={() => setShowScheduleForm(true)}
-                      className="bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-700 transition-all shadow-lg shadow-brand-200 flex items-center gap-2"
-                    >
-                      <Plus size={18} />
-                      Add Class
-                    </button>
+                    {isAdmin ? (
+                      <button 
+                        onClick={() => setShowScheduleForm(true)}
+                        className="bg-brand-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-200 flex items-center gap-2 cursor-pointer bg-slate-900"
+                      >
+                        <Plus size={18} />
+                        Tambah Jadwal Kuliah
+                      </button>
+                    ) : (
+                      <div className="text-right text-[10px] font-bold text-slate-400 bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 max-w-xs leading-relaxed">
+                        ⚠️ Hubungi Akademik jika terdapat ketidaksesuaian kelas.
+                      </div>
+                    )}
                   </div>
-                  <Timetable schedule={filteredSchedule} onDelete={deleteClass} />
+                  <Timetable 
+                    schedule={filteredSchedule} 
+                    onDelete={handleDeleteClass} 
+                    isAdmin={isAdmin}
+                    onEdit={(session) => {
+                      setEditingSession(session);
+                      setShowScheduleForm(true);
+                    }}
+                  />
                 </div>
               )}
 
               {activeTab === 'tasks' && (
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <h2 className="text-3xl font-display font-bold text-slate-900">Reminders & Deadlines</h2>
-                      <p className="text-slate-500">Keep track of your academic deadlines and exams.</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-3xl font-display font-bold text-slate-900">Tenggat & Penugasan Akademik</h2>
+                        {isAdmin ? (
+                          <span className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            🛡️ Pengelola (Admin)
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold bg-slate-50 text-slate-500 border border-slate-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            🔒 Siswa (Baca Saja)
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-slate-500 text-sm mt-1">Pantau rincian tugas kuliah, ujian, dan pengumuman tenggat waktu resmi kampus.</p>
                     </div>
-                    <button 
-                      onClick={() => setShowReminderForm(true)}
-                      className="bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-700 transition-all shadow-lg shadow-brand-200 flex items-center gap-2"
-                    >
-                      <Plus size={18} />
-                      Add New
-                    </button>
+                    {isAdmin ? (
+                      <button 
+                        onClick={() => setShowReminderForm(true)}
+                        className="bg-brand-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-200 flex items-center gap-2 cursor-pointer bg-slate-900"
+                      >
+                        <Plus size={18} />
+                        Tambah Penugasan Baru
+                      </button>
+                    ) : (
+                      <div className="text-right text-[10px] font-bold text-slate-400 bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 max-w-xs leading-relaxed">
+                        💡 Centang tugas selesai untuk tracking pribadi Anda.
+                      </div>
+                    )}
                   </div>
 
                   {/* Notification History */}
@@ -818,7 +1499,7 @@ const AppContent = () => {
                     <div className="bg-brand-50 border border-brand-100 rounded-3xl p-6 mb-8">
                       <h3 className="text-sm font-bold text-brand-700 uppercase tracking-wider mb-4 flex items-center gap-2">
                         <Bell size={16} />
-                        Recent Notifications
+                        Notifikasi Terkini
                       </h3>
                       <div className="space-y-2">
                         {state.notifications.map(notif => (
@@ -835,6 +1516,7 @@ const AppContent = () => {
 
                   <TaskList 
                     tasks={filteredReminders} 
+                    isAdmin={isAdmin}
                     onToggle={(id) => {
                       const item = allReminders.find(r => r.id === id);
                       if (item?.type === 'task') toggleTask(id);
@@ -842,9 +1524,16 @@ const AppContent = () => {
                     }} 
                     onDelete={(id) => {
                       const item = allReminders.find(r => r.id === id);
-                      if (item?.type === 'task') deleteTask(id);
-                      else deleteExam(id);
+                      if (item?.type === 'task') {
+                        handleDeleteTask(id);
+                      } else {
+                        handleDeleteExam(id);
+                      }
                     }} 
+                    onEdit={(item) => {
+                      setEditingReminder(item);
+                      setShowReminderForm(true);
+                    }}
                   />
                 </div>
               )}
@@ -857,21 +1546,7 @@ const AppContent = () => {
                       <p className="text-slate-500">Monitor your academic performance.</p>
                     </div>
                   </div>
-                  <GPACalculator grades={state.grades} onAdd={addGrade} onDelete={deleteGrade} />
-                </div>
-              )}
-
-              {activeTab === 'ai' && (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-3xl font-display font-bold text-slate-900">AI Study Buddy</h2>
-                      <p className="text-slate-500">Your intelligent academic assistant powered by Gemini.</p>
-                    </div>
-                  </div>
-                  <div className="max-w-4xl mx-auto">
-                    <StudyBuddy />
-                  </div>
+                  <GPACalculator grades={state.grades} onAdd={addGrade} onUpdate={updateGrade} onDelete={deleteGrade} />
                 </div>
               )}
 
@@ -882,6 +1557,10 @@ const AppContent = () => {
                   onUpdate={updateFlashcardSet} 
                   onDelete={deleteFlashcardSet} 
                 />
+              )}
+
+              {activeTab === 'studybuddy' && (
+                <StudyBuddy />
               )}
 
               {activeTab === 'settings' && (
@@ -930,6 +1609,63 @@ const AppContent = () => {
                             />
                           </button>
                         </div>
+
+                        {/* Custom Class Alarm Controller Widget */}
+                        <div className="flex flex-col p-4 bg-slate-50 rounded-2xl gap-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-bold text-slate-900">Notifikasi Alarm Kelas 🔔</p>
+                              <p className="text-xs text-slate-500">Dapatkan peringatan manis s.d 15 menit sebelum perkuliahan</p>
+                            </div>
+                            <button 
+                              onClick={() => {
+                                if (typeof window !== 'undefined' && 'Notification' in window) {
+                                  Notification.requestPermission().then(() => {
+                                    showToast("Izin notifikasi peramban berhasil diaktifkan! 🔔", undefined, 'success');
+                                  });
+                                }
+                              }}
+                              className="px-3 py-1.5 bg-brand-50 hover:bg-brand-100 text-brand-600 font-bold text-[10px] uppercase rounded-lg transition-all cursor-pointer"
+                            >
+                              {typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted' ? 'DIiZINKAN ✓' : 'MINTA IZIN'}
+                            </button>
+                          </div>
+                          
+                          <div className="flex items-center justify-between border-t border-slate-200/50 pt-2.5">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Uji Coba Alarm Suara</span>
+                            <button
+                              onClick={() => {
+                                try {
+                                  const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                                  const osc = audioCtx.createOscillator();
+                                  const gain = audioCtx.createGain();
+                                  osc.connect(gain);
+                                  gain.connect(audioCtx.destination);
+                                  
+                                  osc.type = 'sine';
+                                  const nowTime = audioCtx.currentTime;
+                                  
+                                  osc.frequency.setValueAtTime(523.25, nowTime); // C5
+                                  osc.frequency.setValueAtTime(659.25, nowTime + 0.15); // E5
+                                  osc.frequency.setValueAtTime(783.99, nowTime + 0.3); // G5
+                                  
+                                  gain.gain.setValueAtTime(0.15, nowTime);
+                                  gain.gain.exponentialRampToValueAtTime(0.001, nowTime + 0.8);
+                                  
+                                  osc.start(nowTime);
+                                  osc.stop(nowTime + 0.8);
+                                  
+                                  showToast("Chime alarm manis berbunyi! 🎵 Bersiap perkuliahan.", undefined, 'success');
+                                } catch (e) {
+                                  showToast("Interaksi audio dibatasi peramban. Klik layar dahulu sebelum menguji.", undefined, 'error');
+                                }
+                              }}
+                              className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-[10px] px-3 py-1.5 rounded-lg uppercase tracking-wider transition-all shadow-sm active:scale-95 shrink-0 cursor-pointer"
+                            >
+                              Test Alarm 🔔
+                            </button>
+                          </div>
+                        </div>
                         
                         <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl opacity-50 cursor-not-allowed">
                           <div>
@@ -963,6 +1699,45 @@ const AppContent = () => {
           </AnimatePresence>
         </div>
       </main>
+
+
+
+      {/* Toast Notifications */}
+      <div className="fixed bottom-24 md:bottom-6 right-0 md:right-6 left-0 md:left-auto px-4 md:px-0 z-[100] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+        <AnimatePresence>
+          {toasts.map((toast) => (
+            <motion.div
+              key={toast.id}
+              initial={{ opacity: 0, y: 50, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.9, transition: { duration: 0.15 } }}
+              className="bg-slate-900 text-white rounded-2xl p-4 shadow-xl border border-slate-800 flex items-center justify-between gap-4 pointer-events-auto w-full"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0">
+                  <Trash2 size={16} />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-slate-100">{toast.message}</p>
+                </div>
+              </div>
+              
+              {toast.onUndo && (
+                <button
+                  onClick={() => {
+                    toast.onUndo?.();
+                    setToasts(prev => prev.filter(t => t.id !== toast.id));
+                  }}
+                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-[10px] px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer uppercase tracking-wider transition-all shadow-sm active:scale-95 shrink-0"
+                >
+                  <RotateCcw size={12} className="stroke-[3px]" />
+                  Batal Hapus
+                </button>
+              )}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
 
       {/* Mobile Navigation */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-1 py-2 grid grid-cols-7 items-center z-50 transition-colors shadow-[0_-8px_30px_rgba(0,0,0,0.05)]">

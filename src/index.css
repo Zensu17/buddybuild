@@ -141,3 +141,34 @@ button, a {
   @apply transition-all duration-300;
 }
 
+/* User Chat styling to override markdown-body text color */
+.markdown-body.user-chat,
+.markdown-body.user-chat p,
+.markdown-body.user-chat h1,
+.markdown-body.user-chat h2,
+.markdown-body.user-chat h3,
+.markdown-body.user-chat h4,
+.markdown-body.user-chat h5,
+.markdown-body.user-chat h6,
+.markdown-body.user-chat li,
+.markdown-body.user-chat ul,
+.markdown-body.user-chat ol,
+.markdown-body.user-chat blockquote,
+.markdown-body.user-chat th,
+.markdown-body.user-chat td,
+.markdown-body.user-chat span,
+.markdown-body.user-chat strong,
+.markdown-body.user-chat em {
+  color: #ffffff !important;
+}
+
+.markdown-body.user-chat code {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+.markdown-body.user-chat pre {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
