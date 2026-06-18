@@ -67,7 +67,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 
 const ADMIN_EMAILS = [
   'sitorusalbert27@gmail.com',
-  'admin@buddybuild.com',
+  'admin@buddybuild.fun',
   'admin@buddybuild.ac.id'
 ];
 

@@ -1715,9 +1715,7 @@ export const ZenSoundPlayer = () => {
               <iframe
                 src={currentExternalUrl}
                 className="w-full h-full border-0"
-                allow="autoplay; encrypted-media; clipboard-write; fullscreen; picture-in-picture; web-share"
-                sandbox="allow-scripts allow-same-origin allow-presentation allow-popups allow-forms allow-popups-to-escape-sandbox"
-                referrerPolicy="no-referrer"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture; web-share"
                 loading="lazy"
                 title="External Focus Station"
               />
