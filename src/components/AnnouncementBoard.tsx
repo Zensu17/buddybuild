@@ -1,16 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Megaphone, Trash2, ShieldAlert, Sparkles, Plus, Calendar, BellRing, UserCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Task, ClassSession } from '../types';
-
-export interface Announcement {
-  id: string;
-  title: string;
-  content: string;
-  category: 'akademik' | 'event' | 'darurat' | 'tips';
-  date: string;
-  author: string;
-}
+import { buddybuildApi, Announcement } from '../services/buddybuildApi';
 
 interface AnnouncementBoardProps {
   isAdmin: boolean;
@@ -74,49 +65,47 @@ export const AnnouncementBoard = ({ isAdmin, adminName, onAddAdminTask, onAddAdm
   const [schedStart, setSchedStart] = useState('08:00');
   const [schedEnd, setSchedEnd] = useState('10:00');
 
-  // Load / Save Announcements
+  // Load announcements from Python backend
   useEffect(() => {
-    const cached = localStorage.getItem('buddybuild_announcements');
-    if (cached) {
-      try {
-        setAnnouncements(JSON.parse(cached));
-      } catch (e) {
-        setAnnouncements(DEFAULT_ANNOUNCEMENTS);
-      }
-    } else {
-      setAnnouncements(DEFAULT_ANNOUNCEMENTS);
-      localStorage.setItem('buddybuild_announcements', JSON.stringify(DEFAULT_ANNOUNCEMENTS));
-    }
+    buddybuildApi.getAnnouncements()
+      .then((res) => {
+        if (res.success && res.data.length > 0) {
+          setAnnouncements(res.data);
+        } else {
+          setAnnouncements(DEFAULT_ANNOUNCEMENTS);
+        }
+      })
+      .catch(() => setAnnouncements(DEFAULT_ANNOUNCEMENTS));
   }, []);
 
-  const saveAnnouncements = (list: Announcement[]) => {
-    setAnnouncements(list);
-    localStorage.setItem('buddybuild_announcements', JSON.stringify(list));
+  const persistAnnouncement = async (item: Omit<Announcement, 'id' | 'date'>) => {
+    const res = await buddybuildApi.createAnnouncement(item);
+    if (res.success) {
+      setAnnouncements((prev) => [res.data, ...prev]);
+    }
+    return res.data;
   };
 
-  const handlePostAnnouncement = (e: React.FormEvent) => {
+  const handlePostAnnouncement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !content) return;
 
     const finalAuthor = author.trim() || adminName || 'Admin Utama';
 
-    const newAnn: Announcement = {
-      id: crypto.randomUUID(),
+    await persistAnnouncement({
       title,
       content,
       category,
-      date: new Date().toISOString(),
-      author: finalAuthor
-    };
+      author: finalAuthor,
+    });
 
-    saveAnnouncements([newAnn, ...announcements]);
     setTitle('');
     setContent('');
-    setAuthor(finalAuthor); // sync input
+    setAuthor(finalAuthor);
     setShowPostingForm(false);
   };
 
-  const handlePushTask = (e: React.FormEvent) => {
+  const handlePushTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!itemTitle || !itemCourse || !itemDueDate) return;
 
@@ -127,16 +116,12 @@ export const AnnouncementBoard = ({ isAdmin, adminName, onAddAdminTask, onAddAdm
       priority: itemPriority
     });
 
-    // Also auto-post a small alert announcement notifying students of new task
-    const alertAnn: Announcement = {
-      id: crypto.randomUUID(),
+    await persistAnnouncement({
       title: `Penugasan Baru: ${itemTitle}`,
       content: `Admin telah menambahkan tugas baru di reminders untuk mata kuliah ${itemCourse} dengan tenggat ${new Date(itemDueDate).toLocaleString('id-ID')}. Mohon dikerjakan tepat waktu!`,
       category: 'akademik',
-      date: new Date().toISOString(),
-      author: author || adminName || 'Admin Kelas'
-    };
-    saveAnnouncements([alertAnn, ...announcements]);
+      author: author || adminName || 'Admin Kelas',
+    });
 
     setItemTitle('');
     setItemCourse('');
@@ -144,7 +129,7 @@ export const AnnouncementBoard = ({ isAdmin, adminName, onAddAdminTask, onAddAdm
     setShowPostingForm(false);
   };
 
-  const handlePushSchedule = (e: React.FormEvent) => {
+  const handlePushSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!itemTitle || !schedStart || !schedEnd) return;
 
@@ -155,23 +140,20 @@ export const AnnouncementBoard = ({ isAdmin, adminName, onAddAdminTask, onAddAdm
       endTime: schedEnd
     });
 
-    // Also post announcement
-    const alertAnn: Announcement = {
-      id: crypto.randomUUID(),
+    await persistAnnouncement({
       title: `Jadwal Pengganti/Baru: ${itemTitle}`,
       content: `Jadwal perkuliahan baru telah diposting pada kalender belajar Anda: Setiap hari ${['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][parseInt(schedDay)]} pukul ${schedStart} - ${schedEnd}.`,
       category: 'akademik',
-      date: new Date().toISOString(),
-      author: author || adminName || 'Admin Administrasi'
-    };
-    saveAnnouncements([alertAnn, ...announcements]);
+      author: author || adminName || 'Admin Administrasi',
+    });
 
     setItemTitle('');
     setShowPostingForm(false);
   };
 
-  const handleDeleteAnnouncement = (id: string) => {
-    saveAnnouncements(announcements.filter(a => a.id !== id));
+  const handleDeleteAnnouncement = async (id: string) => {
+    await buddybuildApi.deleteAnnouncement(id);
+    setAnnouncements((prev) => prev.filter((a) => a.id !== id));
   };
 
   const getCategoryTheme = (cat: string) => {

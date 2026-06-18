@@ -20,6 +20,7 @@ import rehypeKatex from 'rehype-katex';
 import { useAppState } from '../hooks/useAppState';
 import { auth } from '../firebase';
 import { ChatSession, ChatMessage } from '../types';
+import { buddybuildApi } from '../services/buddybuildApi';
 
 import 'katex/dist/katex.min.css';
 
@@ -166,18 +167,7 @@ export const StudyBuddy: React.FC = () => {
     }
 
     try {
-      const response = await fetch('/buddybuild/study-buddy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt: formattedPrompt,
-          context: "Asisten Universitas BuddyBuild"
-        })
-      });
-
-      const result = await response.json();
+      const result = await buddybuildApi.studyBuddy(formattedPrompt, 'Asisten Universitas BuddyBuild');
 
       let replyText = "";
       let responseTokens = undefined;

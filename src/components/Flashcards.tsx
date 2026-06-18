@@ -3,6 +3,7 @@ import { Plus, Trash2, BookOpen, ChevronLeft, ChevronRight, RotateCw, Save, X, L
 import { FlashcardSet, Flashcard } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+import { buddybuildApi } from '../services/buddybuildApi';
 
 interface FlashcardsProps {
   sets: FlashcardSet[];
@@ -36,14 +37,7 @@ export const Flashcards = ({ sets, onAdd, onUpdate, onDelete }: FlashcardsProps)
     setIsAiLoading(true);
     setAiError('');
     try {
-      const response = await fetch('/buddybuild/ai/generate-flashcards', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ topic: aiTopic, course: aiCourse })
-      });
-      const resData = await response.json();
+      const resData = await buddybuildApi.generateFlashcards(aiTopic, aiCourse);
       if (resData.success && resData.data) {
         onAdd({
           title: resData.data.title,

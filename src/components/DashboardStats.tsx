@@ -6,18 +6,12 @@ import {
 } from 'recharts';
 import { TrendingUp, Clock, BookOpen, CheckSquare, Plus, Trash2, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { buddybuildApi, StudyLog } from '../services/buddybuildApi';
 
 interface DashboardStatsProps {
   grades: CourseGrade[];
   tasks: Task[];
   exams: Exam[];
-}
-
-interface StudyLog {
-  id: string;
-  course: string;
-  minutes: number;
-  date: string;
 }
 
 export const DashboardStats = ({ grades, tasks, exams }: DashboardStatsProps) => {
@@ -26,56 +20,42 @@ export const DashboardStats = ({ grades, tasks, exams }: DashboardStatsProps) =>
   const [manualMinutes, setManualMinutes] = useState('');
   const [showAddLog, setShowAddLog] = useState(false);
 
-  // Load study logs on mount
   useEffect(() => {
-    const cached = localStorage.getItem('buddybuild_study_logs');
-    if (cached) {
-      try {
-        setStudyLogs(JSON.parse(cached));
-      } catch (e) {
-        console.error("Parsed study logs failed", e);
-      }
-    } else {
-      // Mock initial study logs representing pre-logged data to populate nicely
-      const initialLogs: StudyLog[] = [
-        { id: '1', course: 'Kalkulus', minutes: 120, date: new Date().toISOString() },
-        { id: '2', course: 'Struktur Data', minutes: 180, date: new Date().toISOString() },
-        { id: '3', course: 'Fisika Dasar', minutes: 90, date: new Date().toISOString() },
-        { id: '4', course: 'Bahasa Inggris', minutes: 60, date: new Date().toISOString() }
-      ];
-      setStudyLogs(initialLogs);
-      localStorage.setItem('buddybuild_study_logs', JSON.stringify(initialLogs));
-    }
+    buddybuildApi.getStudyLogs()
+      .then((res) => {
+        if (res.success) setStudyLogs(res.data);
+      })
+      .catch((err) => console.error('Failed to load study logs', err));
   }, []);
 
-  // Save study logs
-  const saveStudyLogs = (newLogs: StudyLog[]) => {
-    setStudyLogs(newLogs);
-    localStorage.setItem('buddybuild_study_logs', JSON.stringify(newLogs));
-  };
-
-  const handleAddStudyLog = (e: React.FormEvent) => {
+  const handleAddStudyLog = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualCourse || !manualMinutes) return;
 
     const mins = parseInt(manualMinutes) || 0;
     if (mins <= 0) return;
 
-    const newLog: StudyLog = {
-      id: crypto.randomUUID(),
-      course: manualCourse,
-      minutes: mins,
-      date: new Date().toISOString()
-    };
+    try {
+      const res = await buddybuildApi.createStudyLog(manualCourse, mins);
+      if (res.success) {
+        setStudyLogs((prev) => [res.data, ...prev]);
+      }
+    } catch (err) {
+      console.error('Failed to create study log', err);
+    }
 
-    saveStudyLogs([newLog, ...studyLogs]);
     setManualCourse('');
     setManualMinutes('');
     setShowAddLog(false);
   };
 
-  const handleDeleteLog = (id: string) => {
-    saveStudyLogs(studyLogs.filter(log => log.id !== id));
+  const handleDeleteLog = async (id: string) => {
+    try {
+      await buddybuildApi.deleteStudyLog(id);
+      setStudyLogs((prev) => prev.filter((log) => log.id !== id));
+    } catch (err) {
+      console.error('Failed to delete study log', err);
+    }
   };
 
   // ==========================================

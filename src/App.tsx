@@ -52,6 +52,7 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { useAuth } from './contexts/AuthContext';
 import canvasConfetti from 'canvas-confetti';
 import { loginWithGoogle, logout, loginWithEmail, registerWithEmail } from './firebase';
+import { buddybuildApi, Habit } from './services/buddybuildApi';
 
 const STUDY_QUOTES = [
   { text: "Hasil tertinggi dari pendidikan adalah toleransi dan pemahaman mendalam.", author: "Helen Keller" },
@@ -379,23 +380,26 @@ const AppContent = () => {
   
   // State untuk Kutipan & Habits
   const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0);
-  const [habits, setHabits] = useState(() => {
-    const cached = localStorage.getItem('buddybuild_habits');
-    if (cached) {
-      try {
-        return JSON.parse(cached);
-      } catch (e) {}
-    }
-    return [
-      { id: '1', title: 'Sesi Fokus Pomodoro', completed: false },
-      { id: '2', title: 'Tinjau Rencana Jadwal Kuliah', completed: false },
-      { id: '3', title: 'Latihan Kuis / Kerjakan Flashcard', completed: false },
-      { id: '4', title: 'Konsumsi Air Putih & Istirahat', completed: false }
-    ];
-  });
+  const [habits, setHabits] = useState<Habit[]>([
+    { id: '1', title: 'Sesi Fokus Pomodoro', completed: false },
+    { id: '2', title: 'Tinjau Rencana Jadwal Kuliah', completed: false },
+    { id: '3', title: 'Latihan Kuis / Kerjakan Flashcard', completed: false },
+    { id: '4', title: 'Konsumsi Air Putih & Istirahat', completed: false },
+  ]);
+  const habitsLoaded = useRef(false);
 
   useEffect(() => {
-    localStorage.setItem('buddybuild_habits', JSON.stringify(habits));
+    buddybuildApi.getHabits()
+      .then((res) => {
+        if (res.success && res.data.length > 0) setHabits(res.data);
+      })
+      .catch(() => {})
+      .finally(() => { habitsLoaded.current = true; });
+  }, []);
+
+  useEffect(() => {
+    if (!habitsLoaded.current) return;
+    buddybuildApi.updateHabits(habits).catch(() => {});
   }, [habits]);
 
   useEffect(() => {
@@ -509,10 +513,24 @@ const AppContent = () => {
   };
 
   // Notes State
-  const [notes, setNotes] = useState<string>(() => localStorage.getItem('buddybuild_notes') || '');
+  const [notes, setNotes] = useState<string>('');
+  const notesLoaded = useRef(false);
 
   useEffect(() => {
-    localStorage.setItem('buddybuild_notes', notes);
+    buddybuildApi.getNotes()
+      .then((res) => {
+        if (res.success) setNotes(res.data.content);
+      })
+      .catch(() => {})
+      .finally(() => { notesLoaded.current = true; });
+  }, []);
+
+  useEffect(() => {
+    if (!notesLoaded.current) return;
+    const timeout = setTimeout(() => {
+      buddybuildApi.updateNotes(notes).catch(() => {});
+    }, 500);
+    return () => clearTimeout(timeout);
   }, [notes]);
 
   useEffect(() => {

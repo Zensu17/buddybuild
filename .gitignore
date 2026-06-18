@@ -60,6 +60,14 @@ Thumbs.db
 # Vite local timestamps
 vite.config.ts.timestamp-*
 
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+backend/data/*.json
+
 # Environment variables (Crucial for security)
 .env
 .env.local

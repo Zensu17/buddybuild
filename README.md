@@ -49,9 +49,9 @@ Dilengkapi dengan integrasi **Gemini AI**, BuddyBuild membantu Anda memahami top
 
 Aplikasi ini dibangun menggunakan arsitektur modern berkinerja tinggi:
 - **Frontend**: React 19 + TypeScript + Vite + TailwindCSS 4 + Framer Motion (Animasi Lancar).
-- **Backend**: Node.js + Express + TypeScript (Modular Controller & Routes).
+- **Backend**: Python + FastAPI + Uvicorn (Modular routes & services).
 - **Database & Auth**: Firebase Firestore (Keamanan granular via Rules) + Firebase Authentication.
-- **AI Engine**: `@google/genai` (Menghubungkan ke model canggih `gemini-3.5-flash`).
+- **AI Engine**: `google-genai` Python SDK (Menghubungkan ke model canggih `gemini-3.5-flash`).
 
 ### 🛡️ Fitur Keamanan Tambahan
 - **API Key Proxy**: Tidak ada kunci API Gemini yang bocor ke browser. Seluruh pemanggilan AI diproksi aman di sisi server.
@@ -59,4 +59,3 @@ Aplikasi ini dibangun menggunakan arsitektur modern berkinerja tinggi:
 - **Payload Validation**: Input pengguna divalidasi ketat sebelum diproses oleh sistem AI.
 
 ---
-
