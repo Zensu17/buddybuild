@@ -82,7 +82,7 @@ def create_app() -> FastAPI:
 
 
 def _mount_static_files(app: FastAPI) -> None:
-    dist_path = Path(__file__).resolve().parent.parent / "dist"
+    dist_path = Path(__file__).resolve().parent.parent / "frontend" / "dist"
     if not dist_path.exists():
         return
 
