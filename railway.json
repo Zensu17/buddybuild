@@ -1,9 +1,9 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
-    "buildCommand": "npm ci --prefix frontend && npm run build --prefix frontend && pip install -r backend/requirements.txt"
+    "buildCommand": "npm ci --prefix frontend && npm run build --prefix frontend"
   },
   "deploy": {
-    "startCommand": "python backend/main.py"
+    "startCommand": "pip install -r backend/requirements.txt && python backend/main.py"
   }
 }
